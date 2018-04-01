@@ -2,5 +2,5 @@
 cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 cmake_policy(VERSION 2.8.8)
 
-execute_process(COMMAND ninja -C "/mywork/github/skia/out/config/" build.ninja)
+execute_process(COMMAND ninja -C "/mywork/github/skia/out/arm64/" build.ninja)
 include(CMakeLists.ext)
