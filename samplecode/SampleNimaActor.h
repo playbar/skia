@@ -8,12 +8,14 @@
 #ifndef SampleNimaActor_DEFINED
 #define SampleNimaActor_DEFINED
 
-#include <nima/Actor.hpp>
-#include <nima/ActorImage.hpp>
-#include <nima/Vec2D.hpp>
+//#include <nima/Actor.hpp>
+//#include <nima/ActorImage.hpp>
+//#include <nima/Vec2D.hpp>
+#include "../third_party/externals/Nima-Cpp/Source/Actor.hpp"
 
 #include "SkCanvas.h"
 #include "SkImage.h"
+
 
 class SampleActor;
 class SampleActorImage;

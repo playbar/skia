@@ -9,7 +9,7 @@
 #include "SampleNimaActor.h"
 #include "SkAnimTimer.h"
 #include "SkView.h"
-#include <nima/Animation/ActorAnimationInstance.hpp>
+//#include <nima/Animation/ActorAnimationInstance.hpp>
 #include <cmath>
 
 using namespace nima;

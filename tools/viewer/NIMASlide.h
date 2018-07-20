@@ -12,10 +12,14 @@
 
 #include "SkCanvas.h"
 #include "SkVertices.h"
-#include <nima/Actor.hpp>
-#include <nima/ActorImage.hpp>
-#include <nima/Animation/ActorAnimationInstance.hpp>
-#include <nima/Vec2D.hpp>
+#include "../../third_party/externals/Nima-Cpp/Source/Animation/ActorAnimationInstance.hpp"
+#include "../../third_party/externals/Nima-Cpp/Source/Actor.hpp"
+#include "../../third_party/externals/Nima-Cpp/Source/ActorImage.hpp"
+#include "../../third_party/externals/Nima-Cpp/Source/Vec2D.hpp"
+//#include <nima/Actor.hpp>
+//#include <nima/ActorImage.hpp>
+//#include <nima/Animation/ActorAnimationInstance.hpp>
+//#include <nima/Vec2D.hpp>
 
 class NIMAActor;
 class NIMAActorImage;
