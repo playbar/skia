@@ -73,6 +73,8 @@ static DEFINE_bool(list, false, "List samples?");
 #    define BACKENDS_STR "\"sw\" and \"gl\""
 #endif
 
+static DEFINE_string2(backend_gl, b, "gl", "Backend to use. Allowed values are " BACKENDS_STR ".");
+
 static DEFINE_string2(backend, b, "sw", "Backend to use. Allowed values are " BACKENDS_STR ".");
 
 static DEFINE_int32(msaa, 1, "Number of subpixel samples. 0 for no HW antialiasing.");
@@ -224,7 +226,7 @@ Viewer::Viewer(int argc, char** argv, void* platformData)
     initializeEventTracingForTools();
     static SkTaskGroup::Enabler kTaskGroupEnabler(FLAGS_threads);
 
-    fBackendType = get_backend_type(FLAGS_backend[0]);
+    fBackendType = get_backend_type(FLAGS_backend_gl[0]);
     fWindow = Window::CreateNativeWindow(platformData);
 
     DisplayParams displayParams;

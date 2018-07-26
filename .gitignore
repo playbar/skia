@@ -56,3 +56,5 @@ node_modules
 tools/lottiecap/filmstrip.png
 obj
 cmake-build-debug
+.ninja_deps
+.ninja_log
