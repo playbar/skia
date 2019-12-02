@@ -97,12 +97,6 @@ sk_sp<SkFlattenable> SkTrimPE::CreateProc(SkReadBuffer& buffer) {
         (mode & 1) ? SkTrimPathEffect::Mode::kInverted : SkTrimPathEffect::Mode::kNormal);
 }
 
-#ifndef SK_IGNORE_TO_STRING
-void SkTrimPE::toString(SkString* str) const {
-    str->appendf("SkTrimPathEffect: (%g %g)", fStartT, fStopT);
-}
-#endif
-
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 sk_sp<SkPathEffect> SkTrimPathEffect::Make(SkScalar startT, SkScalar stopT, Mode mode) {

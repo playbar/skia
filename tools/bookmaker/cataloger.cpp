@@ -10,7 +10,7 @@
 #include "SkOSFile.h"
 #include "SkOSPath.h"
 
-bool Catalog::appendFile(const string& path) {
+bool Catalog::appendFile(string path) {
     FILE* file = fopen(path.c_str(), "r");
     if (!file) {
         SkDebugf("could not append %s\n", path.c_str());
@@ -79,14 +79,13 @@ bool Catalog::closeCatalog() {
 }
 
 bool Catalog::parseFromFile(const char* path) {
-    if (!INHERITED::parseSetup(path)) {
+    if (!INHERITED::parseFromFile(path)) {
         return false;
     }
     fIndent = 4;
     this->writeString("var text = {");
     this->lf(1);
     fTextOut = true;
-    TextParser::Save save(this);
     if (!parseFiddles()) {
         return false;
     }
@@ -96,7 +95,8 @@ bool Catalog::parseFromFile(const char* path) {
     this->writeString("var pngs = {");
     fTextOut = false;
     fPngOut = true;
-    save.restore();
+    JsonStatus* status = &fStack.back();
+    status->fIter = status->fObject.begin();
     fContinuation = false;
     return parseFiddles();
 }

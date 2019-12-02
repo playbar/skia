@@ -53,7 +53,7 @@
 #include "SkClipOpPriv.h"
 #include "SkColor.h"
 #include "SkDocument.h"
-#include "SkFlattenable.h"
+#include "SkFlattenablePriv.h"
 #include "SkImageFilter.h"
 #include "SkImageInfo.h"
 #include "SkMalloc.h"
@@ -838,7 +838,6 @@ class ZeroBoundsImageFilter : public SkImageFilter {
 public:
     static sk_sp<SkImageFilter> Make() { return sk_sp<SkImageFilter>(new ZeroBoundsImageFilter); }
 
-    SK_TO_STRING_OVERRIDE()
     SK_DECLARE_PUBLIC_FLATTENABLE_DESERIALIZATION_PROCS(ZeroBoundsImageFilter)
 
 protected:
@@ -846,7 +845,8 @@ protected:
         return nullptr;
     }
     sk_sp<SkImageFilter> onMakeColorSpace(SkColorSpaceXformer*) const override { return nullptr; }
-    SkIRect onFilterNodeBounds(const SkIRect&, const SkMatrix&, MapDirection) const override {
+    SkIRect onFilterNodeBounds(const SkIRect&, const SkMatrix&,
+                               MapDirection, const SkIRect* inputRect) const override {
         return SkIRect::MakeEmpty();
     }
 
@@ -861,12 +861,6 @@ sk_sp<SkFlattenable> ZeroBoundsImageFilter::CreateProc(SkReadBuffer& buffer) {
     return nullptr;
 }
 
-#ifndef SK_IGNORE_TO_STRING
-void ZeroBoundsImageFilter::toString(SkString* str) const {
-    str->appendf("ZeroBoundsImageFilter: ()");
-}
-#endif
-
 }  // anonymous namespace
 
 DEF_TEST(Canvas_SaveLayerWithNullBoundsAndZeroBoundsImageFilter, r) {
@@ -878,3 +872,51 @@ DEF_TEST(Canvas_SaveLayerWithNullBoundsAndZeroBoundsImageFilter, r) {
     REPORTER_ASSERT(r, canvas.getDeviceClipBounds().isEmpty());
     canvas.restore();
 }
+
+#include "SkPaintImageFilter.h"
+
+// Test that we don't crash/assert when building a canvas with degenerate coordintes
+// (esp. big ones, that might invoke tiling).
+DEF_TEST(Canvas_degenerate_dimension, reporter) {
+    // Need a paint that will sneak us past the quickReject in SkCanvas, so we can test the
+    // raster code further downstream.
+    SkPaint paint;
+    paint.setImageFilter(SkPaintImageFilter::Make(SkPaint(), nullptr));
+    REPORTER_ASSERT(reporter, !paint.canComputeFastBounds());
+
+    const int big = 100 * 1024; // big enough to definitely trigger tiling
+    const SkISize sizes[] {SkISize{0, big}, {big, 0}, {0, 0}};
+    for (SkISize size : sizes) {
+        SkBitmap bm;
+        bm.setInfo(SkImageInfo::MakeN32Premul(size.width(), size.height()));
+        SkCanvas canvas(bm);
+        canvas.drawRect({0, 0, 100, 90*1024}, paint);
+    }
+}
+
+#include "SkBlurImageFilter.h"
+
+DEF_TEST(Canvas_ClippedOutImageFilter, reporter) {
+    SkCanvas canvas(100, 100);
+
+    SkPaint p;
+    p.setColor(SK_ColorGREEN);
+    p.setImageFilter(SkBlurImageFilter::Make(3.0f, 3.0f, nullptr, nullptr));
+
+    SkRect blurredRect = SkRect::MakeXYWH(60, 10, 30, 30);
+
+    SkMatrix invM;
+    invM.setRotate(-45);
+    invM.mapRect(&blurredRect);
+
+    const SkRect clipRect = SkRect::MakeXYWH(0, 50, 50, 50);
+
+    canvas.clipRect(clipRect);
+
+    canvas.rotate(45);
+    const SkMatrix preCTM = canvas.getTotalMatrix();
+    canvas.drawRect(blurredRect, p);
+    const SkMatrix postCTM = canvas.getTotalMatrix();
+    REPORTER_ASSERT(reporter, preCTM == postCTM);
+}
+

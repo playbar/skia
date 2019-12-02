@@ -7,9 +7,8 @@ import math
 
 
 DEPS = [
-  'core',
+  'checkout',
   'ct',
-  'flavor',
   'recipe_engine/context',
   'recipe_engine/file',
   'recipe_engine/json',
@@ -40,6 +39,13 @@ TOOL_TO_DEFAULT_SKPS_PER_SLAVE = {
 DEFAULT_SKPS_CHROMIUM_BUILD = '2b7e85eb251dc7-a3cf3659ed2c08'
 
 
+def make_path(api, *path):
+  """Return a Path object for the given path."""
+  key  = 'custom_%s' % '_'.join(path)
+  api.path.c.base_paths[key] = tuple(path)
+  return api.path[key]
+
+
 def RunSteps(api):
   # Figure out which repository to use.
   buildername = api.properties['buildername']
@@ -61,27 +67,29 @@ def RunSteps(api):
   # Figure out which tool to use.
   if 'DM' in buildername:
     skia_tool = 'dm'
-    build_target = 'dm'
   elif 'BENCH' in buildername:
     skia_tool = 'nanobench'
-    build_target = 'nanobench'
   elif 'IMG_DECODE' in buildername:
     skia_tool = 'get_images_from_skps'
-    build_target = 'tools'
   else:
     raise Exception('Do not recognise the buildername %s.' % buildername)
 
-  api.core.setup()
-  api.flavor.compile(build_target)
+  api.vars.setup()
+  checkout_root = make_path(api, '/', 'b', 'work')
+  gclient_cache = make_path(api, '/', 'b', 'cache')
+  api.checkout.bot_update(checkout_root=checkout_root,
+                          gclient_cache=gclient_cache)
+  api.file.ensure_directory('makedirs tmp_dir', api.vars.tmp_dir)
 
   # Required paths.
-  infrabots_dir = api.vars.skia_dir.join('infra', 'bots')
+  infrabots_dir = checkout_root.join('skia', 'infra', 'bots')
   isolate_dir = infrabots_dir.join('ct')
   isolate_path = isolate_dir.join(CT_SKPS_ISOLATE)
 
-  api.run.copy_build_products(
-      api.flavor.out_dir,
-      isolate_dir)
+  # Copy the required binary to the isolate dir.
+  src = api.vars.build_dir.join(skia_tool)
+  api.file.copy('copy %s' % skia_tool, src, isolate_dir.join(skia_tool))
+
   api.skia_swarming.setup(
       infrabots_dir.join('tools', 'luci-go'),
       swarming_rev='')
@@ -123,8 +131,8 @@ def RunSteps(api):
   # referenced also needs to change. As of 8/8/17 the other places are:
   # * infra/bots/ct/ct_skps.isolate
   # * infra/bots/ct/run_ct_skps.py
-  skps_dir = api.vars.checkout_root.join('skps', skps_chromium_build,
-                                         ct_page_type, str(ct_num_slaves))
+  skps_dir = checkout_root.join(
+      'skps', skps_chromium_build, ct_page_type, str(ct_num_slaves))
   version_file = skps_dir.join(SKPS_VERSION_FILE)
   if api.path.exists(version_file):  # pragma: nocover
     version_file_contents = api.file.read_text(
@@ -142,7 +150,7 @@ def RunSteps(api):
           'makedirs %s' % api.path.basename(skps_dir), skps_dir)
 
   # If a blacklist file exists then specify SKPs to be blacklisted.
-  blacklists_dir = api.vars.skia_dir.join('infra', 'bots', 'ct', 'blacklists')
+  blacklists_dir = infrabots_dir.join('ct', 'blacklists')
   blacklist_file = blacklists_dir.join(
       '%s_%s_%s.json' % (skia_tool, ct_page_type, skps_chromium_build))
   blacklist_skps = []
@@ -165,7 +173,7 @@ def RunSteps(api):
     extra_variables = {
         'SLAVE_NUM': str(slave_num),
         'TOOL_NAME': skia_tool,
-        'GIT_HASH': api.vars.got_revision,
+        'GIT_HASH': api.properties['revision'],
         'CONFIGURATION': api.vars.configuration,
         'BUILDER': buildername,
         'CHROMIUM_BUILD': skps_chromium_build,
@@ -446,6 +454,7 @@ def GenTests(api):
         ct_num_slaves=ct_num_slaves,
         num_per_slave=num_per_slave,
         repository='https://skia.googlesource.com/skia.git',
+        revision=skia_revision,
         patch_storage='gerrit') +
     api.properties.tryserver(
         buildername=builder,

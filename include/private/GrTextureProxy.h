@@ -100,6 +100,13 @@ protected:
 
     sk_sp<GrSurface> createSurface(GrResourceProvider*) const override;
 
+    void setIsGLTextureRectangleOrExternal() {
+        fSurfaceFlags |= GrInternalSurfaceFlags::kIsGLTextureRectangleOrExternal;
+    }
+    bool isGLTextureRectangleOrExternal() const {
+        return fSurfaceFlags & GrInternalSurfaceFlags::kIsGLTextureRectangleOrExternal;
+    }
+
 private:
     GrMipMapped      fMipMapped;
 
@@ -117,7 +124,7 @@ private:
     void setUniqueKey(GrProxyProvider*, const GrUniqueKey&);
     void clearUniqueKey();
 
-    SkDEBUGCODE(void validateLazySurface(const GrSurface*) override;)
+    SkDEBUGCODE(void onValidateSurface(const GrSurface*) override;)
 
     // For wrapped proxies the GrTexture pointer is stored in GrIORefProxy.
     // For deferred proxies that pointer will be filled in when we need to instantiate

@@ -8,6 +8,7 @@
 #ifndef SkTrimImpl_DEFINED
 #define SkTrimImpl_DEFINED
 
+#include "SkFlattenablePriv.h"
 #include "SkPathEffect.h"
 
 #include "SkTrimPathEffect.h"
@@ -18,7 +19,6 @@ public:
 
     bool filterPath(SkPath* dst, const SkPath& src, SkStrokeRec*, const SkRect*) const override;
 
-    SK_TO_STRING_OVERRIDE()
     SK_DECLARE_PUBLIC_FLATTENABLE_DESERIALIZATION_PROCS(SkTrimPE)
 
 protected:

@@ -44,7 +44,6 @@ GrCaps::GrCaps(const GrContextOptions& options) {
     fNPOTTextureTileSupport = false;
     fSRGBSupport = false;
     fSRGBWriteControl = false;
-    fSRGBDecodeDisableSupport = false;
     fDiscardRenderTargetSupport = false;
     fReuseScratchTextures = true;
     fReuseScratchBuffers = true;
@@ -94,6 +93,8 @@ GrCaps::GrCaps(const GrContextOptions& options) {
     fAvoidStencilBuffers = false;
 
     fPreferVRAMUseOverFlushes = true;
+
+    fDriverBugWorkarounds = options.fDriverBugWorkarounds;
 }
 
 void GrCaps::applyOptionsOverrides(const GrContextOptions& options) {
@@ -123,6 +124,8 @@ void GrCaps::applyOptionsOverrides(const GrContextOptions& options) {
         fMaxWindowRectangles = GrWindowRectangles::kMaxWindows;
     }
     fAvoidStencilBuffers = options.fAvoidStencilBuffers;
+
+    fDriverBugWorkarounds.applyOverrides(options.fDriverBugWorkarounds);
 }
 
 static SkString map_flags_to_string(uint32_t flags) {
@@ -152,7 +155,6 @@ void GrCaps::dumpJSON(SkJSONWriter* writer) const {
     writer->appendBool("NPOT Texture Tile Support", fNPOTTextureTileSupport);
     writer->appendBool("sRGB Support", fSRGBSupport);
     writer->appendBool("sRGB Write Control", fSRGBWriteControl);
-    writer->appendBool("sRGB Decode Disable", fSRGBDecodeDisableSupport);
     writer->appendBool("Discard Render Target Support", fDiscardRenderTargetSupport);
     writer->appendBool("Reuse Scratch Textures", fReuseScratchTextures);
     writer->appendBool("Reuse Scratch Buffers", fReuseScratchBuffers);
@@ -259,4 +261,11 @@ bool GrCaps::validateSurfaceDesc(const GrSurfaceDesc& desc, GrMipMapped mipped) 
     }
 
     return true;
+}
+
+GrBackendFormat GrCaps::createFormatFromBackendTexture(const GrBackendTexture& backendTex) const {
+    if (!backendTex.isValid()) {
+        return GrBackendFormat();
+    }
+    return this->onCreateFormatFromBackendTexture(backendTex);
 }

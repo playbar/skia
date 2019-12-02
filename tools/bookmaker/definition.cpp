@@ -6,6 +6,7 @@
  */
 
 #include "bookmaker.h"
+#include "SkOSPath.h"
 
 #ifdef CONST
 #undef CONST
@@ -138,7 +139,7 @@ const struct OperatorParser {
                                     {{ CONST,  OpType::kThis,   OpMod::kReference, }}},
 };
 
-OpType lookup_type(const string& typeWord, const string& name) {
+OpType lookup_type(string typeWord, string name) {
     if (typeWord == name || (typeWord == "SkIVector" && name == "SkIPoint")
                          || (typeWord == "SkVector" && name == "SkPoint")) {
         return OpType::kThis;
@@ -191,7 +192,7 @@ bool Definition::parseOperator(size_t doubleColons, string& result) {
     SkASSERT(isStatic == false || returnsConst == false);
     iParser.skipWhiteSpace();
     const char* returnTypeStart = iParser.fChar;
-    iParser.skipToNonAlphaNum();
+    iParser.skipToNonName();
     SkASSERT(iParser.fChar > returnTypeStart);
     string returnType(returnTypeStart, iParser.fChar - returnTypeStart);
     OpType returnOpType = lookup_type(returnType, className);
@@ -200,7 +201,7 @@ bool Definition::parseOperator(size_t doubleColons, string& result) {
     SkAssertResult(iParser.skipExact("operator"));
     iParser.skipWhiteSpace();
     fMethodType = Definition::MethodType::kOperator;
-    TextParser::Save save(&iParser);
+    TextParserSave save(&iParser);
     for (auto parser : opData) {
         save.restore();
         if (!iParser.skipExact(parser.fSymbol)) {
@@ -241,7 +242,7 @@ bool Definition::parseOperator(size_t doubleColons, string& result) {
             }
             iParser.skipWhiteSpace();
             const char* paramStart = iParser.fChar;
-            iParser.skipToNonAlphaNum();
+            iParser.skipToNonName();
             SkASSERT(iParser.fChar > paramStart);
             string paramType(paramStart, iParser.fChar - paramStart);
             OpType paramOpType = lookup_type(paramType, className);
@@ -257,7 +258,7 @@ bool Definition::parseOperator(size_t doubleColons, string& result) {
                 countsMatch = false;
                 break;
             }
-            iParser.skipToNonAlphaNum();
+            iParser.skipToNonName();
             if ('[' == iParser.peek()) {
                 paramMod = OpMod::kArray;
                 SkAssertResult(iParser.skipExact("[]"));
@@ -324,7 +325,7 @@ bool Definition::parseOperator(size_t doubleColons, string& result) {
 #undef BLANK
 #undef DEFOP
 
-bool Definition::boilerplateIfDef(Definition* parent) {
+bool Definition::boilerplateIfDef() {
     const Definition& label = fTokens.front();
     if (Type::kWord != label.fType) {
         return false;
@@ -333,32 +334,6 @@ bool Definition::boilerplateIfDef(Definition* parent) {
     return true;
 }
 
-// todo: this is matching #ifndef SkXXX_DEFINED for no particular reason
-// it doesn't do anything useful with arbitrary input, e.g. #ifdef SK_SUPPORT_LEGACY_CANVAS_HELPERS
-// also doesn't know what to do with SK_REQUIRE_LOCAL_VAR()
-bool Definition::boilerplateDef(Definition* parent) {
-    if (!this->boilerplateIfDef(parent)) {
-        return false;
-    }
-    const char* s = fName.c_str();
-    const char* e = strchr(s, '_');
-    return true; // fixme: if this is trying to do something useful with define, do it here
-    if (!e) {
-        return false;
-    }
-    string prefix(s, e - s);
-    const char* inName = strstr(parent->fName.c_str(), prefix.c_str());
-    if (!inName) {
-        return false;
-    }
-    if ('/' != inName[-1] && '\\' != inName[-1]) {
-        return false;
-    }
-    if (strcmp(inName + prefix.size(), ".h")) {
-        return false;
-    }
-    return true;
-}
 
 // fixme: this will need to be more complicated to handle all of Skia
 // for now, just handle paint -- maybe fiddle will loosen naming restrictions
@@ -397,6 +372,15 @@ void Definition::setCanonicalFiddle() {
             size_t openParen = fName.find('(', doubleColons);
             if (string::npos == openParen) {
                 result += fName.substr(doubleColons);
+                // see if it is a constructor -- if second to last delimited name equals last
+                size_t nextColons = fName.find("::", doubleColons);
+                if (string::npos != nextColons) {
+                    nextColons += 2;
+                    if (!strncmp(&fName[doubleColons], &fName[nextColons],
+                            nextColons - doubleColons - 2)) {
+                        fMethodType = Definition::MethodType::kConstructor;
+                    }
+                }
             } else {
                 size_t comma = fName.find(',', doubleColons);
                 if (string::npos == comma) {
@@ -414,7 +398,7 @@ void Definition::setCanonicalFiddle() {
                     if (params.startsWith("const") || params.startsWith("int")
                             || params.startsWith("Sk")) {
                         const char* wordStart = params.fChar;
-                        params.skipToNonAlphaNum();
+                        params.skipToNonName();
                         if (underline) {
                             result += '_';
                         } else {
@@ -422,7 +406,7 @@ void Definition::setCanonicalFiddle() {
                         }
                         result += string(wordStart, params.fChar - wordStart);
                     } else {
-                        params.skipToNonAlphaNum();
+                        params.skipToNonName();
                     }
                     if (!params.eof() && '*' == params.peek()) {
                         if (underline) {
@@ -546,6 +530,75 @@ bool Definition::checkMethod() const {
             return paramError.reportError<bool>("#Param without param in #Method");
         }
     }
+    // check after end of #Line and before next child for description
+    const char* descStart = fContentStart;
+    const char* descEnd = nullptr;
+    const Definition* defEnd = nullptr;
+    const Definition* priorDef = nullptr;
+    for (auto& child : fChildren) {
+        if (MarkType::kAnchor == child->fMarkType) {
+            continue;
+        }
+        if (MarkType::kCode == child->fMarkType) {
+            priorDef = child;
+            continue;
+        }
+        if (MarkType::kDeprecated == child->fMarkType) {
+            return true;
+        }
+        if (MarkType::kExperimental == child->fMarkType) {
+            return true;
+        }
+        if (MarkType::kFormula == child->fMarkType) {
+            continue;
+        }
+        if (MarkType::kList == child->fMarkType) {
+            priorDef = child;
+            continue;
+        }
+        if (MarkType::kMarkChar == child->fMarkType) {
+            continue;
+        }
+        if (MarkType::kPhraseRef == child->fMarkType) {
+            continue;
+        }
+        if (MarkType::kPrivate == child->fMarkType) {
+            return true;
+        }
+        TextParser emptyCheck(fFileName, descStart, child->fStart, child->fLineCount);
+        if (!emptyCheck.eof() && emptyCheck.skipWhiteSpace()) {
+            descStart = emptyCheck.fChar;
+            emptyCheck.trimEnd();
+            defEnd = priorDef;
+            descEnd = emptyCheck.fEnd;
+            break;
+        }
+        descStart = child->fTerminator;
+        priorDef = nullptr;
+    }
+    if (!descEnd) {
+        return methodParser.reportError<bool>("missing description");
+    }
+    TextParser description(fFileName, descStart, descEnd, fLineCount);
+    // expect first word capitalized and pluralized. expect a trailing period
+    SkASSERT(descStart < descEnd);
+    if (!isupper(descStart[0])) {
+        description.reportWarning("expected capital");
+    } else if ('.' != descEnd[-1]) {
+        if (!defEnd || defEnd->fTerminator != descEnd) {
+            description.reportWarning("expected period");
+        }
+    } else {
+        if (!description.startsWith("For use by Android")) {
+            description.skipToSpace();
+            if (',' == description.fChar[-1]) {
+                --description.fChar;
+            }
+            if ('s' != description.fChar[-1]) {
+                description.reportWarning("expected plural");
+            }
+        }
+    }
     return true;
 }
 
@@ -574,10 +627,21 @@ bool Definition::crossCheck(const Definition& includeToken) const {
     return crossCheckInside(fContentStart, fContentEnd, includeToken);
 }
 
+const char* Definition::methodEnd() const {
+    const char defaultTag[] = " = default";
+    size_t tagSize = sizeof(defaultTag) - 1;
+    const char* tokenEnd = fContentEnd - tagSize;
+    if (tokenEnd <= fContentStart || strncmp(tokenEnd, defaultTag, tagSize)) {
+        tokenEnd = fContentEnd;
+    }
+    return tokenEnd;
+}
+
 bool Definition::crossCheckInside(const char* start, const char* end,
         const Definition& includeToken) const {
     TextParser def(fFileName, start, end, fLineCount);
-    TextParser inc("", includeToken.fContentStart, includeToken.fContentEnd, 0);
+    const char* tokenEnd = includeToken.methodEnd();
+    TextParser inc("", includeToken.fContentStart, tokenEnd, 0);
     if (inc.startsWith("SK_API")) {
         inc.skipWord("SK_API");
     }
@@ -670,7 +734,7 @@ string Definition::formatFunction(Format format) const {
         indent = (size_t) (lastEnd - lastStart);
     }
     // trim indent so longest line doesn't exceed box width
-    TextParser::Save savePlace(&methodParser);
+    TextParserSave savePlace(&methodParser);
     const char* saveStart = lastStart;
     ptrdiff_t maxLine = 0;
     do {
@@ -702,12 +766,12 @@ string Definition::formatFunction(Format format) const {
     lastStart = saveStart;
     lastEnd = methodParser.fChar;
     indent = SkTMin(indent, (size_t) (limit - maxLine));
-    // write string wtih trimmmed indent
+    // write string with trimmmed indent
     string methodStr;
     int written = 0;
     do {
         const char* nextStart = lastEnd;
-        SkASSERT(written < limit);
+//        SkASSERT(written < limit);
         const char* delimiter = methodParser.anyOf(",)");
         const char* nextEnd = delimiter ? delimiter : methodParser.fEnd;
         if (delimiter) {
@@ -766,6 +830,18 @@ string Definition::fiddleName() const {
     return fFiddle.substr(start, end - start);
 }
 
+string Definition::fileName() const {
+    size_t nameStart = fFileName.rfind(SkOSPath::SEPARATOR);
+    if (SkOSPath::SEPARATOR != '/') {
+        size_t altNameStart = fFileName.rfind('/');
+        nameStart = string::npos == nameStart ? altNameStart :
+                string::npos != altNameStart && altNameStart > nameStart ? altNameStart : nameStart;
+    }
+    SkASSERT(string::npos != nameStart);
+    string baseFile = fFileName.substr(nameStart + 1);
+    return baseFile;
+}
+
 const Definition* Definition::findClone(string match) const {
     for (auto child : fChildren) {
         if (!child->fClone) {
@@ -791,7 +867,7 @@ const Definition* Definition::hasChild(MarkType markType) const {
     return nullptr;
 }
 
-const Definition* Definition::hasParam(const string& ref) const {
+const Definition* Definition::hasParam(string ref) const {
     SkASSERT(MarkType::kMethod == fMarkType);
     for (auto iter : fChildren) {
         if (MarkType::kParam != iter->fMarkType) {
@@ -805,7 +881,7 @@ const Definition* Definition::hasParam(const string& ref) const {
     return nullptr;
 }
 
-bool Definition::hasMatch(const string& name) const {
+bool Definition::hasMatch(string name) const {
     for (auto child : fChildren) {
         if (name == child->fName) {
             return true;
@@ -815,6 +891,31 @@ bool Definition::hasMatch(const string& name) const {
         }
     }
     return false;
+}
+
+string Definition::incompleteMessage(DetailsType detailsType) const {
+    SkASSERT(!IncompleteAllowed(fMarkType));
+    auto iter = std::find_if(fChildren.begin(), fChildren.end(),
+            [](const Definition* test) { return IncompleteAllowed(test->fMarkType); });
+    SkASSERT(fChildren.end() != iter);
+    SkASSERT(Details::kNone == (*iter)->fDetails);
+    string message = MarkType::kExperimental == (*iter)->fMarkType ?
+            "Experimental." : "Deprecated.";
+    if (Details::kDoNotUse_Experiment == fDetails) {
+        message += " Do not use.";
+    } else if (Details::kNotReady_Experiment == fDetails) {
+        message += " Not ready for general use.";
+    } else if (Details::kSoonToBe_Deprecated == fDetails) {
+        message = "To be deprecated soon.";
+    } else if (Details::kTestingOnly_Experiment == fDetails) {
+        message += " For testing only.";
+    }
+    if (DetailsType::kPhrase == detailsType) {
+        message = message.substr(0, message.length() - 1);  // remove trailing period
+        std::replace(message.begin(), message.end(), '.', ':');
+        std::transform(message.begin(), message.end(), message.begin(), ::tolower);
+    }
+    return message;
 }
 
 bool Definition::isStructOrClass() const {
@@ -827,8 +928,11 @@ bool Definition::isStructOrClass() const {
     return true;
 }
 
-bool Definition::methodHasReturn(const string& name, TextParser* methodParser) const {
+bool Definition::methodHasReturn(string name, TextParser* methodParser) const {
     if (methodParser->skipExact("static")) {
+        methodParser->skipWhiteSpace();
+    }
+    if (methodParser->skipExact("virtual")) {
         methodParser->skipWhiteSpace();
     }
     const char* lastStart = methodParser->fChar;
@@ -889,7 +993,7 @@ string Definition::methodName() const {
 bool Definition::nextMethodParam(TextParser* methodParser, const char** nextEndPtr,
         string* paramName) const {
     int parenCount = 0;
-    TextParser::Save saveState(methodParser);
+    TextParserSave saveState(methodParser);
     while (true) {
         if (methodParser->eof()) {
             return methodParser->reportError<bool>("#Method function missing close paren");
@@ -965,7 +1069,7 @@ string Definition::NormalizedName(string name) {
     return normalizedName;
 }
 
-static string unpreformat(const string& orig) {
+static string unpreformat(string orig) {
     string result;
     int amp = 0;
     for (auto c : orig) {
@@ -1030,7 +1134,7 @@ static string unpreformat(const string& orig) {
     return result;
 }
 
-bool Definition::paramsMatch(const string& matchFormatted, const string& name) const {
+bool Definition::paramsMatch(string matchFormatted, string name) const {
     string match = unpreformat(matchFormatted);
     TextParser def(fFileName, fStart, fContentStart, fLineCount);
     const char* dName = def.strnstr(name.c_str(), fContentStart);
@@ -1097,7 +1201,7 @@ bool RootDefinition::dumpUnVisited() {
     return success;
 }
 
-const Definition* RootDefinition::find(const string& ref, AllowParens allowParens) const {
+Definition* RootDefinition::find(string ref, AllowParens allowParens) {
     const auto leafIter = fLeaves.find(ref);
     if (leafIter != fLeaves.end()) {
         return &leafIter->second;
@@ -1111,12 +1215,12 @@ const Definition* RootDefinition::find(const string& ref, AllowParens allowParen
     }
     const auto branchIter = fBranches.find(ref);
     if (branchIter != fBranches.end()) {
-        const RootDefinition* rootDef = branchIter->second;
+        RootDefinition* rootDef = branchIter->second;
         return rootDef;
     }
-    const Definition* result = nullptr;
+    Definition* result = nullptr;
     for (const auto& branch : fBranches) {
-        const RootDefinition* rootDef = branch.second;
+        RootDefinition* rootDef = branch.second;
         result = rootDef->find(ref, allowParens);
         if (result) {
             break;

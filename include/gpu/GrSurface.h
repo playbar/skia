@@ -63,19 +63,13 @@ public:
                               GrMipMapped, bool useNextPow2 = false);
 
 protected:
-    void setDoesNotSupportMipMaps() {
+    void setIsGLTextureRectangleOrExternal() {
         SkASSERT(this->asTexture());
-        fSurfaceFlags |= GrInternalSurfaceFlags::kDoesNotSupportMipMaps;
+        fSurfaceFlags |= GrInternalSurfaceFlags::kIsGLTextureRectangleOrExternal;
     }
-    bool doesNotSupportMipMaps() const {
-        return fSurfaceFlags & GrInternalSurfaceFlags::kDoesNotSupportMipMaps;
+    bool isGLTextureRectangleOrExternal() const {
+        return fSurfaceFlags & GrInternalSurfaceFlags::kIsGLTextureRectangleOrExternal;
     }
-
-    void setIsClampOnly() {
-        SkASSERT(this->asTexture());
-        fSurfaceFlags |= GrInternalSurfaceFlags::kIsClampOnly;
-    }
-    bool isClampOnly() const { return fSurfaceFlags & GrInternalSurfaceFlags::kIsClampOnly; }
 
     void setHasMixedSamples() {
         SkASSERT(this->asRenderTarget());
@@ -89,6 +83,14 @@ protected:
     }
     bool supportsWindowRects() const {
         return fSurfaceFlags & GrInternalSurfaceFlags::kWindowRectsSupport;
+    }
+
+    void setGLRTFBOIDIs0() {
+        SkASSERT(this->asRenderTarget());
+        fSurfaceFlags |= GrInternalSurfaceFlags::kGLRTFBOIDIs0;
+    }
+    bool glRTFBOIDis0() const {
+        return fSurfaceFlags & GrInternalSurfaceFlags::kGLRTFBOIDIs0;
     }
 
     // Methods made available via GrSurfacePriv
@@ -114,6 +116,8 @@ protected:
     void onAbandon() override;
 
 private:
+    const char* getResourceType() const override { return "Surface"; }
+
     GrPixelConfig          fConfig;
     int                    fWidth;
     int                    fHeight;

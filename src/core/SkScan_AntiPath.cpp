@@ -5,14 +5,16 @@
  * found in the LICENSE file.
  */
 
-
 #include "SkScanPriv.h"
-#include "SkPath.h"
-#include "SkMatrix.h"
-#include "SkBlitter.h"
-#include "SkRegion.h"
+
 #include "SkAntiRun.h"
+#include "SkBlitter.h"
 #include "SkCoverageDelta.h"
+#include "SkMatrix.h"
+#include "SkPath.h"
+#include "SkPathPriv.h"
+#include "SkRegion.h"
+#include "SkTo.h"
 
 #define SHIFT   SK_SUPERSAMPLE_SHIFT
 #define SCALE   (1 << SHIFT)
@@ -495,7 +497,7 @@ static void add_aa_span(uint8_t* alpha, U8CPU startAlpha, int middleCount,
 
     if (middleCount >= MIN_COUNT_FOR_QUAD_LOOP) {
         // loop until we're quad-byte aligned
-        while (SkTCast<intptr_t>(alpha) & 0x3) {
+        while (reinterpret_cast<intptr_t>(alpha) & 0x3) {
             alpha[0] = SkToU8(alpha[0] + maxValue);
             alpha += 1;
             middleCount -= 1;
@@ -601,7 +603,7 @@ static bool ShouldUseDAA(const SkPath& path) {
     if (gSkForceDeltaAA) {
         return true;
     }
-    if (!gSkUseDeltaAA) {
+    if (!gSkUseDeltaAA || SkPathPriv::IsBadForDAA(path)) {
         return false;
     }
 
@@ -614,7 +616,7 @@ static bool ShouldUseDAA(const SkPath& path) {
     constexpr SkScalar kSmallCubicThreshold = 16;
 
     int n = path.countPoints();
-    if (path.isConvex() || n < kSampleSize) {
+    if (path.isConvex() || n < kSampleSize || path.getBounds().isEmpty()) {
         return false;
     }
 

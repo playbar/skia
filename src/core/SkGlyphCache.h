@@ -10,19 +10,12 @@
 #include "SkArenaAlloc.h"
 #include "SkDescriptor.h"
 #include "SkGlyph.h"
-#include "SkGlyphCache_Globals.h"
+#include "SkGlyphRun.h"
 #include "SkPaint.h"
 #include "SkTHash.h"
 #include "SkScalerContext.h"
 #include "SkTemplates.h"
 #include <memory>
-
-class SkTraceMemoryDump;
-
-class SkGlyphCache;
-using SkExclusiveStrikePtr = std::unique_ptr<
-    SkGlyphCache,
-    SkFunctionWrapper<void, SkGlyphCache, SkGlyphCache_Globals::AttachCache>>;
 
 /** \class SkGlyphCache
 
@@ -39,16 +32,18 @@ using SkExclusiveStrikePtr = std::unique_ptr<
 */
 class SkGlyphCache {
 public:
+    SkGlyphCache(const SkDescriptor& desc,
+                 std::unique_ptr<SkScalerContext> scaler,
+                 const SkPaint::FontMetrics&);
+    ~SkGlyphCache();
+
+    const SkDescriptor& getDescriptor() const;
+
     /** Return true if glyph is cached. */
     bool isGlyphCached(SkGlyphID glyphID, SkFixed x, SkFixed y) const;
 
     /**  Return a glyph that has no information if it is not already filled out. */
     SkGlyph* getRawGlyphByID(SkPackedGlyphID);
-
-    /** Return the Strike's SkArenaAlloc. */
-    SkArenaAlloc* getAlloc() {
-        return &fAlloc;
-    }
 
     /** Returns a glyph with valid fAdvance and fDevKern fields. The remaining fields may be
         valid, but that is not guaranteed. If you require those, call getUnicharMetrics or
@@ -73,6 +68,8 @@ public:
     const SkGlyph& getUnicharMetrics(SkUnichar, SkFixed x, SkFixed y);
     const SkGlyph& getGlyphIDMetrics(uint16_t, SkFixed x, SkFixed y);
 
+    void getAdvances(SkSpan<const SkGlyphID>, SkPoint[]);
+
     /** Return the glyphID for the specified Unichar. If the char has already been seen, use the
         existing cache entry. If not, ask the scalercontext to compute it for us.
     */
@@ -94,6 +91,10 @@ public:
     */
     const void* findImage(const SkGlyph&);
 
+    /** Initializes the image associated with the glyph with |data|.
+     */
+    void initializeImage(const volatile void* data, size_t size, SkGlyph*);
+
     /** If the advance axis intersects the glyph's path, append the positions scaled and offset
         to the array (if non-null), and set the count to the updated array length.
     */
@@ -105,13 +106,26 @@ public:
     */
     const SkPath* findPath(const SkGlyph&);
 
+    /** Initializes the path associated with the glyph with |data|. Returns false if
+     *  data is invalid.
+     */
+    bool initializePath(SkGlyph*, const volatile void* data, size_t size);
+
+    /** Fallback glyphs used during font remoting if the original glyph can't be found.
+     */
+    bool belongsToCache(const SkGlyph* glyph) const;
+    /** Find any glyph in this cache with the given ID, regardless of subpixel positioning.
+     *  If set and present, skip over the glyph with vetoID.
+     */
+    const SkGlyph* getCachedGlyphAnySubPix(SkGlyphID,
+                                           SkPackedGlyphID vetoID = SkPackedGlyphID()) const;
+    void initializeGlyphFromFallback(SkGlyph* glyph, const SkGlyph&);
+
     /** Return the vertical metrics for this strike.
     */
     const SkPaint::FontMetrics& getFontMetrics() const {
         return fFontMetrics;
     }
-
-    const SkDescriptor& getDescriptor() const { return *fDesc; }
 
     SkMask::Format getMaskFormat() const {
         return fScalerContext->getMaskFormat();
@@ -126,46 +140,10 @@ public:
 
     void dump() const;
 
-    static std::unique_ptr<SkScalerContext> CreateScalerContext(
-            const SkDescriptor& desc,
-            const SkScalerContextEffects& effects,
-            const SkTypeface& typeface);
-
     SkScalerContext* getScalerContext() const { return fScalerContext.get(); }
 
-    static SkExclusiveStrikePtr FindStrikeExclusive(const SkDescriptor& desc);
-
-    static SkExclusiveStrikePtr FindOrCreateStrikeExclusive(
-        const SkDescriptor& desc,
-        const SkScalerContextEffects& effects,
-        const SkTypeface& typeface);
-
-    static SkExclusiveStrikePtr FindOrCreateStrikeExclusive(
-        const SkPaint& paint,
-        const SkSurfaceProps* surfaceProps,
-        SkScalerContextFlags scalerContextFlags,
-        const SkMatrix* deviceMatrix);
-
-    static SkExclusiveStrikePtr FindOrCreateStrikeExclusive(const SkPaint& paint) {
-        return FindOrCreateStrikeExclusive(
-                paint, nullptr, SkScalerContextFlags::kFakeGammaAndBoostContrast, nullptr);
-    }
-
-    static SkExclusiveStrikePtr CreateStrikeExclusive(
-        const SkDescriptor& desc,
-        std::unique_ptr<SkScalerContext> scaler,
-        SkPaint::FontMetrics* maybeMetrics = nullptr);
-
-    static void Dump();
-
-    /** Dump memory usage statistics of all the attaches caches in the process using the
-        SkTraceMemoryDump interface.
-    */
-    static void DumpMemoryStatistics(SkTraceMemoryDump* dump);
-
-    static void ForEachStrike(std::function<void(const SkGlyphCache&)> visitor);
-
 #ifdef SK_DEBUG
+    void forceValidate() const;
     void validate() const;
 #else
     void validate() const {}
@@ -191,8 +169,6 @@ public:
     };
 
 private:
-    friend class SkGlyphCache_Globals;
-
     enum MetricsType {
         kNothing_MetricsType,
         kJustAdvance_MetricsType,
@@ -209,10 +185,6 @@ private:
         SkPackedUnicharID fPackedUnicharID;
         SkPackedGlyphID fPackedGlyphID;
     };
-
-    SkGlyphCache(const SkDescriptor& desc, std::unique_ptr<SkScalerContext> scaler,
-                 const SkPaint::FontMetrics&);
-    ~SkGlyphCache();
 
     // Return the SkGlyph* associated with MakeID. The id parameter is the
     // combined glyph/x/y id generated by MakeID. If it is just a glyph id
@@ -243,9 +215,7 @@ private:
     static const SkGlyph::Intercept* MatchBounds(const SkGlyph* glyph,
                                                  const SkScalar bounds[2]);
 
-    SkGlyphCache*          fNext{nullptr};
-    SkGlyphCache*          fPrev{nullptr};
-    const std::unique_ptr<SkDescriptor> fDesc;
+    const SkAutoDescriptor fDesc;
     const std::unique_ptr<SkScalerContext> fScalerContext;
     SkPaint::FontMetrics   fFontMetrics;
 
@@ -265,38 +235,4 @@ private:
     size_t                  fMemoryUsed;
 };
 
-class SkAutoGlyphCache : public SkExclusiveStrikePtr {
-public:
-    SkAutoGlyphCache() = default;
-
-    SkAutoGlyphCache(SkGlyphCache* cache) : INHERITED(cache) {}
-
-    /** deprecated: always enables fake gamma */
-    SkAutoGlyphCache(const SkPaint& paint,
-                     const SkSurfaceProps* surfaceProps,
-                     const SkMatrix* matrix)
-        : INHERITED(SkGlyphCache::FindOrCreateStrikeExclusive(
-            paint, surfaceProps, SkScalerContextFlags::kFakeGammaAndBoostContrast, matrix)) {}
-
-private:
-    using INHERITED = SkExclusiveStrikePtr;
-};
-
-#ifdef SK_BUILD_FOR_ANDROID_FRAMEWORK
-class SkAutoGlyphCacheNoGamma : public SkExclusiveStrikePtr {
-public:
-    SkAutoGlyphCacheNoGamma(const SkPaint& paint,
-                            const SkSurfaceProps* surfaceProps,
-                            const SkMatrix* matrix)
-        : INHERITED(SkGlyphCache::FindOrCreateStrikeExclusive(
-            paint, surfaceProps, SkScalerContextFlags::kNone, matrix)) {}
-
-private:
-    using INHERITED = SkExclusiveStrikePtr;
-};
-#define SkAutoGlyphCacheNoGamma(...) SK_REQUIRE_LOCAL_VAR(SkAutoGlyphCacheNoGamma)
-#endif
-
-#define SkAutoGlyphCache(...) SK_REQUIRE_LOCAL_VAR(SkAutoGlyphCache)
-
-#endif
+#endif  // SkGlyphCache_DEFINED

@@ -192,7 +192,15 @@ DEF_TEST(String, reporter) {
     REPORTER_ASSERT(reporter, a.size() == 2000);
     for (size_t i = 0; i < a.size(); ++i) {
         if (a[i] != ' ') {
-            ERRORF(reporter, "SkStringPrintf fail: a[%d] = '%c'", i, a[i]);
+            ERRORF(reporter, "SkString::printf fail: a[%d] = '%c'", i, a[i]);
+            break;
+        }
+    }
+    a.appendf("%2000s", " ");
+    REPORTER_ASSERT(reporter, a.size() == 4000);
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (a[i] != ' ') {
+            ERRORF(reporter, "SkString::appendf fail: a[%d] = '%c'", i, a[i]);
             break;
         }
     }
@@ -292,7 +300,7 @@ DEF_TEST(String_Threaded, r) {
 // let us create a string with a requested length longer than we can manage.
 DEF_TEST(String_huge, r) {
     // start testing slightly below max 32
-    size_t size = SK_MaxU32 - 16;
+    size_t size = UINT32_MAX - 16;
     // See where we crash, and manually check that its at the right point.
     //
     //  To test, change the false to true

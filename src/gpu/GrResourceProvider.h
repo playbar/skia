@@ -10,7 +10,6 @@
 
 #include "GrBuffer.h"
 #include "GrContextOptions.h"
-#include "GrPathRange.h"
 #include "GrResourceCache.h"
 #include "SkImageInfoPriv.h"
 #include "SkScalerContext.h"
@@ -69,7 +68,7 @@ public:
     sk_sp<GrTexture> createTexture(const GrSurfaceDesc&, SkBudgeted, uint32_t flags = 0);
 
     sk_sp<GrTexture> createTexture(const GrSurfaceDesc&, SkBudgeted, const GrMipLevel texels[],
-                                   int mipLevelCount, SkDestinationSurfaceColorMode mipColorMode);
+                                   int mipLevelCount);
 
     // Create a potentially loose fit texture with the provided data
     sk_sp<GrTexture> createTexture(const GrSurfaceDesc&, SkBudgeted, SkBackingFit,
@@ -143,7 +142,7 @@ public:
                                                            int vertCount,
                                                            const GrUniqueKey& key) {
         if (auto buffer = this->findByUniqueKey<GrBuffer>(key)) {
-            return buffer;
+            return std::move(buffer);
         }
         return this->createPatternedIndexBuffer(pattern, patternSize, reps, vertCount, key);
     }
@@ -165,7 +164,7 @@ public:
     static int QuadCountOfQuadBuffer();
 
     /**
-     * Factories for GrPath and GrPathRange objects. It's an error to call these if path rendering
+     * Factories for GrPath objects. It's an error to call these if path rendering
      * is not supported.
      */
     sk_sp<GrPath> createPath(const SkPath&, const GrStyle&);
@@ -252,6 +251,7 @@ public:
         fGpu = nullptr;
     }
 
+    uint32_t contextUniqueID() const { return fCache->contextUniqueID(); }
     const GrCaps* caps() const { return fCaps.get(); }
     bool overBudget() const { return fCache->overBudget(); }
 

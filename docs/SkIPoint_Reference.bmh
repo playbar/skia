@@ -1,16 +1,14 @@
 #Topic IPoint
-#Alias IPoints
-#Alias IPoint_Reference
-
-#Subtopic Overview
-    #Subtopic Subtopic
-    #Populate
-    ##
-##
+#Alias IPoints ##
+#Alias IPoint_Reference ##
 
 #Struct SkIPoint
 
-SkIPoint holds two 32 bit integer coordinates.
+SkIPoint holds two 32-bit integer coordinates.
+
+#Subtopic Overview
+#Populate
+##
 
 #Subtopic Related_Function
 #Populate
@@ -61,7 +59,7 @@ pt1 == pt2
 ##
 ##
 
-#SeeAlso set() SkPoint::iset() SkPoint::Make SkIPoint16::Make
+#SeeAlso set() SkPoint::iset() SkPoint::Make
 
 #Method ##
 
@@ -87,7 +85,7 @@ pt1.fX == pt1.x()
 ##
 ##
 
-#SeeAlso y() SkPoint::x() SkIPoint16::x()
+#SeeAlso y() SkPoint::x()
 
 #Method ##
 
@@ -108,7 +106,7 @@ pt1.fY == pt1.y()
 ##
 ##
 
-#SeeAlso x() SkPoint::y() SkIPoint16::y()
+#SeeAlso x() SkPoint::y()
 
 #Method ##
 
@@ -157,7 +155,7 @@ pt1 == pt2
 ##
 ##
 
-#SeeAlso Make SkIPoint16::set
+#SeeAlso Make
 
 #Method ##
 
@@ -453,10 +451,20 @@ Can also be used to add IVector to IVector, returning IVector.
 
 #Struct SkIPoint ##
 
-#Topic IPoint ##
 
-#Topic IVector
-    #Alias IVectors
+#Subtopic IVector
+#Line # alias for IPoint ##
+    #Alias IVector ##
+    #Alias IVectors ##
     #Typedef SkIPoint SkIVector
+    #Line # alias for IPoint ##
+    #Code
+    typedef SkIPoint SkIVector;
+    ##
+    SkIVector provides an alternative name for SkIPoint. SkIVector and SkIPoint
+    can be used interchangeably for all purposes.
     #Typedef ##
 ##
+
+#Topic IPoint ##
+

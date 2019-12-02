@@ -25,6 +25,7 @@
 #include "SkShader.h"
 #include "SkStream.h"
 #include "SkTHash.h"
+#include "SkTo.h"
 #include "SkTypeface.h"
 #include "SkUtils.h"
 #include "SkXMLWriter.h"
@@ -87,7 +88,7 @@ static SkString svg_transform(const SkMatrix& t) {
     SkString tstr;
     switch (t.getType()) {
     case SkMatrix::kPerspective_Mask:
-        SkDebugf("Can't handle perspective matrices.");
+        // TODO: handle perspective matrices?
         break;
     case SkMatrix::kTranslate_Mask:
         tstr.printf("translate(%g %g)", t.getTranslateX(), t.getTranslateY());
@@ -468,7 +469,6 @@ void SkSVGDevice::AutoElement::addGradientShaderResources(const SkShader* shader
     grInfo.fColorCount = 0;
     if (SkShader::kLinear_GradientType != shader->asAGradient(&grInfo)) {
         // TODO: non-linear gradient support
-        SkDebugf("unsupported shader type\n");
         return;
     }
 
@@ -491,7 +491,6 @@ void SkSVGDevice::AutoElement::addGradientShaderResources(const SkShader* shader
 sk_sp<SkData> AsDataUri(SkImage* image) {
     sk_sp<SkData> imageData = image->encodeToData();
     if (!imageData) {
-        SkDebugf("Failed to encode image shader's contents.");
         return nullptr;
     }
 
@@ -507,8 +506,6 @@ sk_sp<SkData> AsDataUri(SkImage* image) {
         selectedPrefixLength = sizeof(jpgDataPrefix);
     } else {
       if (!SkPngCodec::IsPng(src, imageData->size())) {
-        SkDebugf("Cached image is stored as unsupported type: %d . re-encoding",
-                 SkCodec::MakeFromData(imageData)->getEncodedFormat());
         imageData = image->encodeToData(SkEncodedImageFormat::kPNG, 100);
       }
       selectedPrefix = pngDataPrefix;
@@ -536,7 +533,6 @@ void SkSVGDevice::AutoElement::addImageShaderResources(const SkShader* shader, c
 
     sk_sp<SkData> dataUri = AsDataUri(image);
     if (!dataUri) {
-        SkDebugf("Failed to encode data as data URI.");
         return;
     }
     SkIRect imageSize = image->bounds();
@@ -547,8 +543,8 @@ void SkSVGDevice::AutoElement::addImageShaderResources(const SkShader* shader, c
                 patternDims[i].appendScalar(imageDimension);
             break;
             default:
+                // TODO: other tile modes?
                 patternDims[i] = "100%";
-                SkDebugf("unhandled tilemode for %d th dim : %d", i, xy[i]);
         }
     }
 
@@ -582,12 +578,11 @@ void SkSVGDevice::AutoElement::addShaderResources(const SkPaint& paint, Resource
     SkASSERT(shader);
 
     if (shader->asAGradient(nullptr) != SkShader::kNone_GradientType) {
-        addGradientShaderResources(shader, paint, resources);
+        this->addGradientShaderResources(shader, paint, resources);
     } else if (shader->isAImage()) {
-        addImageShaderResources(shader, paint, resources);
-    } else {
-        SkDebugf("unsupported shader type\n");
+        this->addImageShaderResources(shader, paint, resources);
     }
+    // TODO: other shader types?
 }
 
 void SkSVGDevice::AutoElement::addClipResources(const MxCp& mc, Resources* resources) {
@@ -798,7 +793,7 @@ void SkSVGDevice::drawPoints(SkCanvas::PointMode mode, size_t count,
     switch (mode) {
             // todo
         case SkCanvas::kPoints_PointMode:
-            SkDebugf("unsupported operation: drawPoints(kPoints_PointMode)\n");
+            // TODO?
             break;
         case SkCanvas::kLines_PointMode:
             count -= 1;
@@ -942,17 +937,6 @@ void SkSVGDevice::drawBitmapRect(const SkBitmap& bm, const SkRect* srcOrNull,
     drawBitmapCommon(MxCp(&adjustedMatrix, cs), bm, paint);
 }
 
-void SkSVGDevice::drawText(const void* text, size_t len,
-                           SkScalar x, SkScalar y, const SkPaint& paint) {
-    AutoElement elem("text", fWriter, fResourceBucket.get(), MxCp(this), paint);
-    elem.addTextAttributes(paint);
-
-    SVGTextBuilder builder(text, len, paint, SkPoint::Make(x, y), 0);
-    elem.addAttribute("x", builder.posX());
-    elem.addAttribute("y", builder.posY());
-    elem.addText(builder.text());
-}
-
 void SkSVGDevice::drawPosText(const void* text, size_t len,
                               const SkScalar pos[], int scalarsPerPos, const SkPoint& offset,
                               const SkPaint& paint) {
@@ -1004,13 +988,12 @@ void SkSVGDevice::drawTextOnPath(const void* text, size_t len, const SkPath& pat
     }
 }
 
-void SkSVGDevice::drawVertices(const SkVertices*, SkBlendMode, const SkPaint&) {
+void SkSVGDevice::drawVertices(const SkVertices*, const SkMatrix*, int, SkBlendMode,
+                               const SkPaint&) {
     // todo
-    SkDebugf("unsupported operation: drawVertices()\n");
 }
 
 void SkSVGDevice::drawDevice(SkBaseDevice*, int x, int y,
                              const SkPaint&) {
     // todo
-    SkDebugf("unsupported operation: drawDevice()\n");
 }

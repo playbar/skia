@@ -29,7 +29,7 @@ public:
     // TODO: investigate the users of this ctor.
     SkNoDrawCanvas(const SkIRect&);
 
-    explicit SkNoDrawCanvas(SkBaseDevice* device);
+    explicit SkNoDrawCanvas(sk_sp<SkBaseDevice> device);
 
     // Optimization to reset state to be the same as after construction.
     void resetCanvas(int width, int height) {
@@ -75,7 +75,8 @@ protected:
                             const SkPaint*) override {}
     void onDrawBitmapLattice(const SkBitmap&, const Lattice&, const SkRect&,
                              const SkPaint*) override {}
-    void onDrawVerticesObject(const SkVertices*, SkBlendMode, const SkPaint&) override {}
+    void onDrawVerticesObject(const SkVertices*, const SkMatrix*, int, SkBlendMode,
+                              const SkPaint&) override {}
     void onDrawAtlas(const SkImage*, const SkRSXform[], const SkRect[], const SkColor[],
                      int, SkBlendMode, const SkRect*, const SkPaint*) override {}
     void onDrawShadowRec(const SkPath&, const SkDrawShadowRec&) override {}

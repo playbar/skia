@@ -37,11 +37,32 @@ GrProxyProvider::GrProxyProvider(GrResourceProvider* resourceProvider,
         , fResourceCache(resourceCache)
         , fAbandoned(false)
         , fCaps(caps)
+        , fContextUniqueID(resourceCache->contextUniqueID())
 #ifdef SK_DEBUG
         , fSingleOwner(owner)
 #endif
 {
+    SkASSERT(fResourceProvider);
+    SkASSERT(fResourceCache);
+    SkASSERT(fCaps);
+    SkASSERT(fSingleOwner);
+}
 
+GrProxyProvider::GrProxyProvider(uint32_t contextUniqueID,
+                                 sk_sp<const GrCaps> caps,
+                                 GrSingleOwner* owner)
+        : fResourceProvider(nullptr)
+        , fResourceCache(nullptr)
+        , fAbandoned(false)
+        , fCaps(caps)
+        , fContextUniqueID(contextUniqueID)
+#ifdef SK_DEBUG
+        , fSingleOwner(owner)
+#endif
+{
+    SkASSERT(fContextUniqueID != SK_InvalidUniqueID);
+    SkASSERT(fCaps);
+    SkASSERT(fSingleOwner);
 }
 
 GrProxyProvider::~GrProxyProvider() {
@@ -211,8 +232,7 @@ sk_sp<GrTextureProxy> GrProxyProvider::createTextureProxy(sk_sp<SkImage> srcImag
         return nullptr;
     }
 
-    GrPixelConfig config = SkImageInfo2GrPixelConfig(as_IB(srcImage)->onImageInfo(),
-                                                     *this->caps());
+    GrPixelConfig config = SkImageInfo2GrPixelConfig(as_IB(srcImage)->onImageInfo());
 
     if (kUnknown_GrPixelConfig == config) {
         return nullptr;
@@ -257,6 +277,10 @@ sk_sp<GrTextureProxy> GrProxyProvider::createTextureProxy(sk_sp<SkImage> srcImag
             },
             desc, kTopLeft_GrSurfaceOrigin, GrMipMapped::kNo, surfaceFlags, fit, budgeted);
 
+    if (!proxy) {
+        return nullptr;
+    }
+
     if (fResourceProvider) {
         // In order to reuse code we always create a lazy proxy. When we aren't in DDL mode however
         // we're better off instantiating the proxy immediately here.
@@ -264,6 +288,9 @@ sk_sp<GrTextureProxy> GrProxyProvider::createTextureProxy(sk_sp<SkImage> srcImag
             return nullptr;
         }
     }
+
+    SkASSERT(proxy->width() == desc.fWidth);
+    SkASSERT(proxy->height() == desc.fHeight);
     return proxy;
 }
 
@@ -280,13 +307,8 @@ sk_sp<GrTextureProxy> GrProxyProvider::createMipMapProxy(const GrSurfaceDesc& de
                              GrInternalSurfaceFlags::kNone);
 }
 
-sk_sp<GrTextureProxy> GrProxyProvider::createMipMapProxyFromBitmap(const SkBitmap& bitmap,
-                                                                   SkColorSpace* dstColorSpace) {
-    SkDestinationSurfaceColorMode mipColorMode = dstColorSpace
-        ? SkDestinationSurfaceColorMode::kGammaAndColorSpaceAware
-        : SkDestinationSurfaceColorMode::kLegacy;
-
-    if (!SkImageInfoIsValid(bitmap.info(), mipColorMode)) {
+sk_sp<GrTextureProxy> GrProxyProvider::createMipMapProxyFromBitmap(const SkBitmap& bitmap) {
+    if (!SkImageInfoIsValid(bitmap.info())) {
         return nullptr;
     }
 
@@ -296,7 +318,7 @@ sk_sp<GrTextureProxy> GrProxyProvider::createMipMapProxyFromBitmap(const SkBitma
     }
 
     ATRACE_ANDROID_FRAMEWORK("Upload MipMap Texture [%ux%u]", pixmap.width(), pixmap.height());
-    sk_sp<SkMipMap> mipmaps(SkMipMap::Build(pixmap, mipColorMode, nullptr));
+    sk_sp<SkMipMap> mipmaps(SkMipMap::Build(pixmap, nullptr));
     if (!mipmaps) {
         return nullptr;
     }
@@ -316,7 +338,7 @@ sk_sp<GrTextureProxy> GrProxyProvider::createMipMapProxyFromBitmap(const SkBitma
         return nullptr;
     }
 
-    GrSurfaceDesc desc = GrImageInfoToSurfaceDesc(pixmap.info(), *this->caps());
+    GrSurfaceDesc desc = GrImageInfoToSurfaceDesc(pixmap.info());
 
     if (0 == mipmaps->countLevels()) {
         return this->createTextureProxy(baseLevel, kNone_GrSurfaceFlags, 1, SkBudgeted::kYes,
@@ -324,7 +346,7 @@ sk_sp<GrTextureProxy> GrProxyProvider::createMipMapProxyFromBitmap(const SkBitma
     }
 
     sk_sp<GrTextureProxy> proxy = this->createLazyProxy(
-            [desc, baseLevel, mipmaps, mipColorMode](GrResourceProvider* resourceProvider) {
+            [desc, baseLevel, mipmaps](GrResourceProvider* resourceProvider) {
                 if (!resourceProvider) {
                     return sk_sp<GrTexture>();
                 }
@@ -349,10 +371,14 @@ sk_sp<GrTextureProxy> GrProxyProvider::createMipMapProxyFromBitmap(const SkBitma
                 }
 
                 return resourceProvider->createTexture(desc, SkBudgeted::kYes, texels.get(),
-                                                       mipLevelCount, mipColorMode);
+                                                       mipLevelCount);
             },
             desc, kTopLeft_GrSurfaceOrigin, GrMipMapped::kYes, SkBackingFit::kExact,
             SkBudgeted::kYes);
+
+    if (!proxy) {
+        return nullptr;
+    }
 
     if (fResourceProvider) {
         // In order to reuse code we always create a lazy proxy. When we aren't in DDL mode however
@@ -539,7 +565,11 @@ sk_sp<GrTextureProxy> GrProxyProvider::createLazyProxy(LazyInstantiateCallback&&
                                                        LazyInstantiationType lazyType) {
     SkASSERT((desc.fWidth <= 0 && desc.fHeight <= 0) ||
              (desc.fWidth > 0 && desc.fHeight > 0));
-    surfaceFlags |= GrInternalSurfaceFlags::kNoPendingIO;
+
+    if (desc.fWidth > fCaps->maxTextureSize() || desc.fHeight > fCaps->maxTextureSize()) {
+        return nullptr;
+    }
+
 
 #ifdef SK_DEBUG
     if (SkToBool(kRenderTarget_GrSurfaceFlag & desc.fFlags)) {
@@ -566,8 +596,12 @@ sk_sp<GrRenderTargetProxy> GrProxyProvider::createLazyRenderTargetProxy(
         SkBackingFit fit, SkBudgeted budgeted) {
     SkASSERT((desc.fWidth <= 0 && desc.fHeight <= 0) ||
              (desc.fWidth > 0 && desc.fHeight > 0));
+
+    if (desc.fWidth > fCaps->maxRenderTargetSize() || desc.fHeight > fCaps->maxRenderTargetSize()) {
+        return nullptr;
+    }
+
     SkASSERT(SkToBool(kRenderTarget_GrSurfaceFlag & desc.fFlags));
-    surfaceFlags |= GrInternalSurfaceFlags::kNoPendingIO;
 
 #ifdef SK_DEBUG
     if (SkToBool(surfaceFlags & GrInternalSurfaceFlags::kMixedSampled)) {
@@ -593,15 +627,16 @@ sk_sp<GrRenderTargetProxy> GrProxyProvider::createLazyRenderTargetProxy(
             std::move(callback), lazyType, desc, origin, fit, budgeted, surfaceFlags));
 }
 
-sk_sp<GrTextureProxy> GrProxyProvider::createFullyLazyProxy(LazyInstantiateCallback&& callback,
-                                                            Renderable renderable,
-                                                            GrSurfaceOrigin origin,
-                                                            GrPixelConfig config) {
+sk_sp<GrTextureProxy> GrProxyProvider::MakeFullyLazyProxy(LazyInstantiateCallback&& callback,
+                                                          Renderable renderable,
+                                                          GrSurfaceOrigin origin,
+                                                          GrPixelConfig config,
+                                                          const GrCaps& caps) {
     GrSurfaceDesc desc;
-    GrInternalSurfaceFlags surfaceFlags = GrInternalSurfaceFlags::kNone;
+    GrInternalSurfaceFlags surfaceFlags = GrInternalSurfaceFlags::kNoPendingIO;
     if (Renderable::kYes == renderable) {
         desc.fFlags = kRenderTarget_GrSurfaceFlag;
-        if (fCaps->maxWindowRectangles() > 0) {
+        if (caps.maxWindowRectangles() > 0) {
             surfaceFlags |= GrInternalSurfaceFlags::kWindowRectsSupport;
         }
     }
@@ -610,12 +645,28 @@ sk_sp<GrTextureProxy> GrProxyProvider::createFullyLazyProxy(LazyInstantiateCallb
     desc.fConfig = config;
     desc.fSampleCnt = 1;
 
-    return this->createLazyProxy(std::move(callback), desc, origin, GrMipMapped::kNo,
-                                 surfaceFlags, SkBackingFit::kApprox, SkBudgeted::kYes);
+    return sk_sp<GrTextureProxy>(
+            (Renderable::kYes == renderable)
+                    ? new GrTextureRenderTargetProxy(std::move(callback),
+                                                     LazyInstantiationType::kSingleUse, desc,
+                                                     origin, GrMipMapped::kNo,
+                                                     SkBackingFit::kApprox, SkBudgeted::kYes,
+                                                     surfaceFlags)
+                    : new GrTextureProxy(std::move(callback), LazyInstantiationType::kSingleUse,
+                                         desc, origin, GrMipMapped::kNo, SkBackingFit::kApprox,
+                                         SkBudgeted::kYes, surfaceFlags));
 }
 
 bool GrProxyProvider::IsFunctionallyExact(GrSurfaceProxy* proxy) {
-    return proxy->priv().isExact() || (SkIsPow2(proxy->width()) && SkIsPow2(proxy->height()));
+    const bool isInstantiated = proxy->priv().isInstantiated();
+    // A proxy is functionally exact if:
+    //   it is exact (obvs)
+    //   when it is instantiated it will be exact (i.e., power of two dimensions)
+    //   it is already instantiated and the proxy covers the entire backing surface
+    return proxy->priv().isExact() ||
+           (!isInstantiated && SkIsPow2(proxy->width()) && SkIsPow2(proxy->height())) ||
+           (isInstantiated && proxy->worstCaseWidth() == proxy->width() &&
+                              proxy->worstCaseHeight() == proxy->height());
 }
 
 void GrProxyProvider::processInvalidProxyUniqueKey(const GrUniqueKey& key) {

@@ -29,6 +29,7 @@
 #include "GrContext.h"
 #include "SkImage_Gpu.h"
 #endif
+#include "GrBackendSurface.h"
 
 SkImage::SkImage(int width, int height, uint32_t uniqueID)
     : fWidth(width)
@@ -126,16 +127,11 @@ sk_sp<SkImage> SkImage::MakeFromEncoded(sk_sp<SkData> encoded, const SkIRect* su
     if (nullptr == encoded || 0 == encoded->size()) {
         return nullptr;
     }
-    return SkImage::MakeFromGenerator(SkImageGenerator::MakeFromEncoded(encoded), subset);
+    return SkImage::MakeFromGenerator(SkImageGenerator::MakeFromEncoded(std::move(encoded)),
+                                      subset);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-const char* SkImage::toString(SkString* str) const {
-    str->appendf("image: (id:%d (%d, %d) %s)", this->uniqueID(), this->width(), this->height(),
-                 this->isOpaque() ? "opaque" : "");
-    return str->c_str();
-}
 
 sk_sp<SkImage> SkImage::makeSubset(const SkIRect& subset) const {
     if (subset.isEmpty()) {
@@ -162,13 +158,13 @@ GrTexture* SkImage::getTexture() const {
 
 bool SkImage::isTextureBacked() const { return SkToBool(as_IB(this)->peekProxy()); }
 
-GrBackendObject SkImage::getTextureHandle(bool flushPendingGrContextIO,
-                                          GrSurfaceOrigin* origin) const {
-    return as_IB(this)->onGetTextureHandle(flushPendingGrContextIO, origin);
+GrBackendTexture SkImage::getBackendTexture(bool flushPendingGrContextIO,
+                                            GrSurfaceOrigin* origin) const {
+    return as_IB(this)->onGetBackendTexture(flushPendingGrContextIO, origin);
 }
 
 bool SkImage::isValid(GrContext* context) const {
-    if (context && context->contextPriv().abandoned()) {
+    if (context && context->abandoned()) {
         return false;
     }
     return as_IB(this)->onIsValid(context);
@@ -180,7 +176,10 @@ GrTexture* SkImage::getTexture() const { return nullptr; }
 
 bool SkImage::isTextureBacked() const { return false; }
 
-GrBackendObject SkImage::getTextureHandle(bool, GrSurfaceOrigin*) const { return 0; }
+GrBackendTexture SkImage::getBackendTexture(bool flushPendingGrContextIO,
+                                            GrSurfaceOrigin* origin) const {
+    return GrBackendTexture(); // invalid
+}
 
 bool SkImage::isValid(GrContext* context) const {
     if (context) {
@@ -202,6 +201,11 @@ SkImage_Base::~SkImage_Base() {
     if (fAddedToCache.load()) {
         SkNotifyBitmapGenIDIsStale(this->uniqueID());
     }
+}
+
+GrBackendTexture SkImage_Base::onGetBackendTexture(bool flushPendingGrContextIO,
+                                                   GrSurfaceOrigin* origin) const {
+    return GrBackendTexture(); // invalid
 }
 
 bool SkImage::readPixels(const SkPixmap& pmap, int srcX, int srcY, CachingHint chint) const {
@@ -253,6 +257,7 @@ sk_sp<SkImage> SkImage::makeWithFilter(const SkImageFilter* filter, const SkIRec
     if (!filter || !outSubset || !offset || !this->bounds().contains(subset)) {
         return nullptr;
     }
+    SkColorType colorType = as_IB(this)->onImageInfo().colorType();
     SkColorSpace* colorSpace = as_IB(this)->onImageInfo().colorSpace();
     sk_sp<SkSpecialImage> srcSpecialImage = SkSpecialImage::MakeFromImage(
         subset, sk_ref_sp(const_cast<SkImage*>(this)), colorSpace);
@@ -262,7 +267,7 @@ sk_sp<SkImage> SkImage::makeWithFilter(const SkImageFilter* filter, const SkIRec
 
     sk_sp<SkImageFilterCache> cache(
         SkImageFilterCache::Create(SkImageFilterCache::kDefaultTransientSize));
-    SkImageFilter::OutputProperties outputProperties(colorSpace);
+    SkImageFilter::OutputProperties outputProperties(colorType, colorSpace);
     SkImageFilter::Context context(SkMatrix::I(), clipBounds, cache.get(), outputProperties);
 
     sk_sp<SkSpecialImage> result = filter->filterImage(srcSpecialImage.get(), context, offset);
@@ -290,8 +295,7 @@ bool SkImage::isAlphaOnly() const {
     return as_IB(this)->onImageInfo().colorType() == kAlpha_8_SkColorType;
 }
 
-sk_sp<SkImage> SkImage::makeColorSpace(sk_sp<SkColorSpace> target,
-                                       SkTransferFunctionBehavior premulBehavior) const {
+sk_sp<SkImage> SkImage::makeColorSpace(sk_sp<SkColorSpace> target) const {
     SkColorSpaceTransferFn fn;
     if (!target || !target->isNumericalTransferFn(&fn)) {
         return nullptr;
@@ -305,13 +309,11 @@ sk_sp<SkImage> SkImage::makeColorSpace(sk_sp<SkColorSpace> target,
         return sk_ref_sp(const_cast<SkImage*>(this));
     }
 
+    // TODO: Re-visit this! Keep existing color type?
     SkColorType targetColorType = kN32_SkColorType;
-    if (SkTransferFunctionBehavior::kRespect == premulBehavior && target->gammaIsLinear()) {
-        targetColorType = kRGBA_F16_SkColorType;
-    }
 
     // TODO: We might consider making this a deferred conversion?
-    return as_IB(this)->onMakeColorSpace(std::move(target), targetColorType, premulBehavior);
+    return as_IB(this)->onMakeColorSpace(std::move(target), targetColorType);
 }
 
 sk_sp<SkImage> SkImage::makeNonTextureImage() const {
@@ -382,7 +384,8 @@ sk_sp<SkImage> SkImage::MakeFromNV12TexturesCopy(GrContext* ctx, SkYUVColorSpace
     return nullptr;
 }
 
-sk_sp<SkImage> SkImage::makeTextureImage(GrContext*, SkColorSpace* dstColorSpace) const {
+sk_sp<SkImage> SkImage::makeTextureImage(GrContext*, SkColorSpace* dstColorSpace,
+                                         GrMipMapped mipMapped) const {
     return nullptr;
 }
 
@@ -400,6 +403,11 @@ void SkImage_unpinAsTexture(const SkImage* image, GrContext* ctx) {
     SkASSERT(image);
     SkASSERT(ctx);
     as_IB(image)->onUnpinAsTexture(ctx);
+}
+
+SkIRect SkImage_getSubset(const SkImage* image) {
+    SkASSERT(image);
+    return as_IB(image)->onGetSubset();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

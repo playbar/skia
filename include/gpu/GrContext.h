@@ -8,7 +8,6 @@
 #ifndef GrContext_DEFINED
 #define GrContext_DEFINED
 
-#include "GrCaps.h"
 #include "SkMatrix.h"
 #include "SkPathEffect.h"
 #include "SkTypes.h"
@@ -16,11 +15,16 @@
 #include "../private/GrSingleOwner.h"
 #include "GrContextOptions.h"
 
+// We shouldn't need this but currently Android is relying on this being include transitively.
+#include "SkUnPreMultiply.h"
+
 class GrAtlasManager;
 class GrBackendFormat;
 class GrBackendSemaphore;
+class GrCaps;
 class GrContextPriv;
 class GrContextThreadSafeProxy;
+class GrContextThreadSafeProxyPriv;
 class GrDrawingManager;
 struct GrDrawOpAtlasConfig;
 class GrFragmentProcessor;
@@ -29,6 +33,7 @@ class GrGlyphCache;
 class GrGpu;
 class GrIndexBuffer;
 struct GrMockOptions;
+class GrOpMemoryPool;
 class GrOvalRenderer;
 class GrPath;
 class GrProxyProvider;
@@ -55,17 +60,17 @@ class SkTraceMemoryDump;
 class SK_API GrContext : public SkRefCnt {
 public:
     /**
-     * Creates a GrContext for a backend context.
+     * Creates a GrContext for a backend context. If no GrGLInterface is provided then the result of
+     * GrGLMakeNativeInterface() is used if it succeeds.
      */
     static sk_sp<GrContext> MakeGL(sk_sp<const GrGLInterface>, const GrContextOptions&);
     static sk_sp<GrContext> MakeGL(sk_sp<const GrGLInterface>);
-    // Deprecated
-    static sk_sp<GrContext> MakeGL(const GrGLInterface*);
-    static sk_sp<GrContext> MakeGL(const GrGLInterface*, const GrContextOptions&);
+    static sk_sp<GrContext> MakeGL(const GrContextOptions&);
+    static sk_sp<GrContext> MakeGL();
 
 #ifdef SK_VULKAN
-    static sk_sp<GrContext> MakeVulkan(sk_sp<const GrVkBackendContext>, const GrContextOptions&);
-    static sk_sp<GrContext> MakeVulkan(sk_sp<const GrVkBackendContext>);
+    static sk_sp<GrContext> MakeVulkan(const GrVkBackendContext&, const GrContextOptions&);
+    static sk_sp<GrContext> MakeVulkan(const GrVkBackendContext&);
 #endif
 
 #ifdef SK_METAL
@@ -108,6 +113,11 @@ public:
      * API calls may crash.
      */
     virtual void abandonContext();
+
+    /**
+     * Returns true if the context was abandoned.
+     */
+    bool abandoned() const;
 
     /**
      * This is similar to abandonContext() however the underlying 3D context is not yet lost and
@@ -188,8 +198,30 @@ public:
      */
     void purgeUnlockedResources(size_t bytesToPurge, bool preferScratchResources);
 
-    /** Access the context capabilities */
-    const GrCaps* caps() const { return fCaps.get(); }
+    /**
+     * This entry point is intended for instances where an app has been backgrounded or
+     * suspended.
+     * If 'scratchResourcesOnly' is true all unlocked scratch resources will be purged but the
+     * unlocked resources with persistent data will remain. If 'scratchResourcesOnly' is false
+     * then all unlocked resources will be purged.
+     * In either case, after the unlocked resources are purged a separate pass will be made to
+     * ensure that resource usage is under budget (i.e., even if 'scratchResourcesOnly' is true
+     * some resources with persistent data may be purged to be under budget).
+     *
+     * @param scratchResourcesOnly   If true only unlocked scratch resources will be purged prior
+     *                               enforcing the budget requirements.
+     */
+    void purgeUnlockedResources(bool scratchResourcesOnly);
+
+    /**
+     * Gets the maximum supported texture size.
+     */
+    int maxTextureSize() const;
+
+    /**
+     * Gets the maximum supported render target size.
+     */
+    int maxRenderTargetSize() const;
 
     /**
      * Can a SkImage be created with the given color type.
@@ -256,6 +288,8 @@ public:
     // Chrome is using this!
     void dumpMemoryStatistics(SkTraceMemoryDump* traceMemoryDump) const;
 
+    bool supportsDistanceFieldText() const;
+
 protected:
     GrContext(GrBackend, int32_t id = SK_InvalidGenID);
 
@@ -275,6 +309,8 @@ private:
     GrProxyProvider*                        fProxyProvider;
     std::unique_ptr<GrTextureStripAtlasManager> fTextureStripAtlasManager;
 
+    // All the GrOp-derived classes use this pool.
+    sk_sp<GrOpMemoryPool>                   fOpMemoryPool;
 
     GrGlyphCache*                           fGlyphCache;
     std::unique_ptr<GrTextBlobCache>        fTextBlobCache;
@@ -332,8 +368,10 @@ private:
  * Can be used to perform actions related to the generating GrContext in a thread safe manner. The
  * proxy does not access the 3D API (e.g. OpenGL) that backs the generating GrContext.
  */
-class GrContextThreadSafeProxy : public SkRefCnt {
+class SK_API GrContextThreadSafeProxy : public SkRefCnt {
 public:
+    ~GrContextThreadSafeProxy();
+
     bool matches(GrContext* context) const { return context->uniqueID() == fContextUniqueID; }
 
     /**
@@ -363,28 +401,34 @@ public:
      *                               with this characterization will be replayed into
      *  @param isMipMapped           Will the surface the DDL will be replayed into have space
      *                               allocated for mipmaps?
+     *  @param willUseGLFBO0         Will the surface the DDL will be replayed into be backed by GL
+     *                               FBO 0. This flag is only valid if using an GL backend.
      */
     SkSurfaceCharacterization createCharacterization(
                                   size_t cacheMaxResourceBytes,
                                   const SkImageInfo& ii, const GrBackendFormat& backendFormat,
                                   int sampleCount, GrSurfaceOrigin origin,
                                   const SkSurfaceProps& surfaceProps,
-                                  bool isMipMapped);
+                                  bool isMipMapped, bool willUseGLFBO0 = false);
 
-    const GrCaps* caps() const { return fCaps.get(); }
-    sk_sp<const GrCaps> refCaps() const { return fCaps; }
+    bool operator==(const GrContextThreadSafeProxy& that) const {
+        // Each GrContext should only ever have a single thread-safe proxy.
+        SkASSERT((this == &that) == (fContextUniqueID == that.fContextUniqueID));
+        return this == &that;
+    }
+
+    bool operator!=(const GrContextThreadSafeProxy& that) const { return !(*this == that); }
+
+    // Provides access to functions that aren't part of the public API.
+    GrContextThreadSafeProxyPriv priv();
+    const GrContextThreadSafeProxyPriv priv() const;
 
 private:
     // DDL TODO: need to add unit tests for backend & maybe options
     GrContextThreadSafeProxy(sk_sp<const GrCaps> caps,
                              uint32_t uniqueID,
                              GrBackend backend,
-                             const GrContextOptions& options)
-        : fCaps(std::move(caps))
-        , fContextUniqueID(uniqueID)
-        , fBackend(backend)
-        , fOptions(options) {
-    }
+                             const GrContextOptions& options);
 
     sk_sp<const GrCaps>    fCaps;
     const uint32_t         fContextUniqueID;
@@ -392,8 +436,7 @@ private:
     const GrContextOptions fOptions;
 
     friend class GrDirectContext; // To construct this object
-    friend class GrContextPriv;   // for access to 'fOptions' in MakeDDL
-    friend class GrDDLContext;    // to implement the GrDDLContext ctor (access to all members)
+    friend class GrContextThreadSafeProxyPriv;
 
     typedef SkRefCnt INHERITED;
 };

@@ -2,5 +2,13 @@
 cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 cmake_policy(VERSION 2.8.8)
 
-execute_process(COMMAND ninja -C "${CMAKE_CURRENT_SOURCE_DIR}/out/config/" build.ninja)
-include(CMakeLists.ext)
+ADD_DEFINITIONS(-DSDL_VIDEO_DRIVER_COCOA)
+
+file(WRITE "/mywork/github/skia/empty.cpp")
+execute_process(COMMAND
+  ninja -C "/mywork/github/skia/" build.ninja
+  RESULT_VARIABLE ninja_result)
+if (ninja_result)
+  message(WARNING "Regeneration failed running ninja: ${ninja_result}")
+endif()
+include("/mywork/github/skia/CMakeLists.ext")

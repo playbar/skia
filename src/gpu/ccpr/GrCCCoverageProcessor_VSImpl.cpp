@@ -10,92 +10,29 @@
 #include "GrMesh.h"
 #include "glsl/GrGLSLVertexGeoBuilder.h"
 
-using Shader = GrCCCoverageProcessor::Shader;
-
-static constexpr int kAttribIdx_X = 0;
-static constexpr int kAttribIdx_Y = 1;
-static constexpr int kAttribIdx_VertexData = 2;
-
-/**
- * This class and its subclasses implement the coverage processor with vertex shaders.
- */
+// This class implements the coverage processor with vertex shaders.
 class GrCCCoverageProcessor::VSImpl : public GrGLSLGeometryProcessor {
-protected:
-    VSImpl(std::unique_ptr<Shader> shader) : fShader(std::move(shader)) {}
+public:
+    VSImpl(std::unique_ptr<Shader> shader, int numSides)
+            : fShader(std::move(shader)), fNumSides(numSides) {}
 
+private:
     void setData(const GrGLSLProgramDataManager& pdman, const GrPrimitiveProcessor&,
                  FPCoordTransformIter&& transformIter) final {
         this->setTransformDataHelper(SkMatrix::I(), pdman, &transformIter);
     }
 
-    struct Coverages {
-        const char* fCoverage = nullptr; // half
-        const char* fAttenuatedCoverage = nullptr; // half2
-    };
-
-    void onEmitCode(EmitArgs& args, GrGPArgs* gpArgs) final {
-        const GrCCCoverageProcessor& proc = args.fGP.cast<GrCCCoverageProcessor>();
-
-        // Vertex shader.
-        GrGLSLVertexBuilder* v = args.fVertBuilder;
-        int numInputPoints = proc.numInputPoints();
-
-        const char* swizzle = (4 == numInputPoints) ? "xyzw" : "xyz";
-        v->codeAppendf("float%ix2 pts = transpose(float2x%i(%s.%s, %s.%s));",
-                       numInputPoints, numInputPoints, proc.getAttrib(kAttribIdx_X).fName, swizzle,
-                       proc.getAttrib(kAttribIdx_Y).fName, swizzle);
-
-        if (WindMethod::kCrossProduct == proc.fWindMethod) {
-            v->codeAppend ("float area_x2 = determinant(float2x2(pts[0] - pts[1], "
-                                                                "pts[0] - pts[2]));");
-            if (4 == numInputPoints) {
-                v->codeAppend ("area_x2 += determinant(float2x2(pts[0] - pts[2], "
-                                                               "pts[0] - pts[3]));");
-            }
-            v->codeAppend ("half wind = sign(area_x2);");
-        } else {
-            SkASSERT(WindMethod::kInstanceData == proc.fWindMethod);
-            SkASSERT(3 == numInputPoints);
-            SkASSERT(kFloat4_GrVertexAttribType == proc.getAttrib(kAttribIdx_X).fType);
-            v->codeAppendf("half wind = %s.w;", proc.getAttrib(kAttribIdx_X).fName);
-        }
-
-        float bloat = kAABloatRadius;
-#ifdef SK_DEBUG
-        if (proc.debugBloatEnabled()) {
-            bloat *= proc.debugBloat();
-        }
-#endif
-        v->defineConstant("bloat", bloat);
-
-        Coverages coverages;
-        this->emitVertexPosition(proc, v, gpArgs, &coverages);
-        SkASSERT(kFloat2_GrSLType == gpArgs->fPositionVar.getType());
-
-        GrGLSLVaryingHandler* varyingHandler = args.fVaryingHandler;
-        SkString varyingCode;
-        fShader->emitVaryings(varyingHandler, GrGLSLVarying::Scope::kVertToFrag, &varyingCode,
-                              gpArgs->fPositionVar.c_str(), coverages.fCoverage,
-                              coverages.fAttenuatedCoverage, "wind");
-        v->codeAppend(varyingCode.c_str());
-
-        varyingHandler->emitAttributes(proc);
-        SkASSERT(!args.fFPCoordTransformHandler->nextCoordTransform());
-
-        // Fragment shader.
-        fShader->emitFragmentCode(proc, args.fFragBuilder, args.fOutputColor, args.fOutputCoverage);
-    }
-
-    virtual void emitVertexPosition(const GrCCCoverageProcessor&, GrGLSLVertexBuilder*, GrGPArgs*,
-                                    Coverages* outCoverages) const = 0;
-
-    virtual ~VSImpl() {}
+    void onEmitCode(EmitArgs&, GrGPArgs*) override;
 
     const std::unique_ptr<Shader> fShader;
-
-    typedef GrGLSLGeometryProcessor INHERITED;
+    const int fNumSides;
 };
 
+static constexpr int kInstanceAttribIdx_X = 0;  // Transposed X values of all input points.
+static constexpr int kInstanceAttribIdx_Y = 1;  // Transposed Y values of all input points.
+
+// Vertex data tells the shader how to offset vertices for conservative raster, as well as how to
+// calculate coverage values for corners and edges.
 static constexpr int kVertexData_LeftNeighborIdShift = 10;
 static constexpr int kVertexData_RightNeighborIdShift = 8;
 static constexpr int kVertexData_BloatIdxShift = 6;
@@ -104,10 +41,6 @@ static constexpr int kVertexData_IsCornerBit = 1 << 4;
 static constexpr int kVertexData_IsEdgeBit = 1 << 3;
 static constexpr int kVertexData_IsHullBit = 1 << 2;
 
-/**
- * Vertex data tells the shader how to offset vertices for conservative raster, and how/whether to
- * calculate initial coverage values for edges. See VSHullAndEdgeImpl.
- */
 static constexpr int32_t pack_vertex_data(int32_t leftNeighborID, int32_t rightNeighborID,
                                           int32_t bloatIdx, int32_t cornerID,
                                           int32_t extraData = 0) {
@@ -131,9 +64,9 @@ static constexpr int32_t edge_vertex_data(int32_t edgeID, int32_t endptIdx, int3
                             (!endptIdx ? kVertexData_InvertNegativeCoverageBit : 0));
 }
 
-static constexpr int32_t triangle_corner_vertex_data(int32_t cornerID, int32_t bloatIdx) {
-    return pack_vertex_data((cornerID + 2) % 3, (cornerID + 1) % 3, bloatIdx, cornerID,
-                            kVertexData_IsCornerBit);
+static constexpr int32_t corner_vertex_data(int32_t leftID, int32_t cornerID, int32_t rightID,
+                                            int32_t bloatIdx) {
+    return pack_vertex_data(leftID, rightID, bloatIdx, cornerID, kVertexData_IsCornerBit);
 }
 
 static constexpr int32_t kTriangleVertices[] = {
@@ -168,20 +101,20 @@ static constexpr int32_t kTriangleVertices[] = {
     edge_vertex_data(2, 1, 1, 3),
     edge_vertex_data(2, 1, 2, 3),
 
-    triangle_corner_vertex_data(0, 0),
-    triangle_corner_vertex_data(0, 1),
-    triangle_corner_vertex_data(0, 2),
-    triangle_corner_vertex_data(0, 3),
+    corner_vertex_data(2, 0, 1, 0),
+    corner_vertex_data(2, 0, 1, 1),
+    corner_vertex_data(2, 0, 1, 2),
+    corner_vertex_data(2, 0, 1, 3),
 
-    triangle_corner_vertex_data(1, 0),
-    triangle_corner_vertex_data(1, 1),
-    triangle_corner_vertex_data(1, 2),
-    triangle_corner_vertex_data(1, 3),
+    corner_vertex_data(0, 1, 2, 0),
+    corner_vertex_data(0, 1, 2, 1),
+    corner_vertex_data(0, 1, 2, 2),
+    corner_vertex_data(0, 1, 2, 3),
 
-    triangle_corner_vertex_data(2, 0),
-    triangle_corner_vertex_data(2, 1),
-    triangle_corner_vertex_data(2, 2),
-    triangle_corner_vertex_data(2, 3),
+    corner_vertex_data(1, 2, 0, 0),
+    corner_vertex_data(1, 2, 0, 1),
+    corner_vertex_data(1, 2, 0, 2),
+    corner_vertex_data(1, 2, 0, 3),
 };
 
 GR_DECLARE_STATIC_UNIQUE_KEY(gTriangleVertexBufferKey);
@@ -244,7 +177,8 @@ static constexpr uint16_t kTriangleIndicesAsTris[] =  {
 
 GR_DECLARE_STATIC_UNIQUE_KEY(gTriangleIndexBufferKey);
 
-static constexpr int32_t kHull4Vertices[] = {
+// Curves, including quadratics, are drawn with a four-sided hull.
+static constexpr int32_t kCurveVertices[] = {
     hull_vertex_data(0, 0, 4),
     hull_vertex_data(0, 1, 4),
     hull_vertex_data(0, 2, 4),
@@ -258,17 +192,27 @@ static constexpr int32_t kHull4Vertices[] = {
     hull_vertex_data(3, 1, 4),
     hull_vertex_data(3, 2, 4),
 
-    // No edges for now (beziers don't use edges).
+    corner_vertex_data(3, 0, 1, 0),
+    corner_vertex_data(3, 0, 1, 1),
+    corner_vertex_data(3, 0, 1, 2),
+    corner_vertex_data(3, 0, 1, 3),
+
+    corner_vertex_data(2, 3, 0, 0),
+    corner_vertex_data(2, 3, 0, 1),
+    corner_vertex_data(2, 3, 0, 2),
+    corner_vertex_data(2, 3, 0, 3),
 };
 
-GR_DECLARE_STATIC_UNIQUE_KEY(gHull4VertexBufferKey);
+GR_DECLARE_STATIC_UNIQUE_KEY(gCurveVertexBufferKey);
 
-static constexpr uint16_t kHull4IndicesAsStrips[] =  {
+static constexpr uint16_t kCurveIndicesAsStrips[] =  {
     1, 0, 2, 11, 3, 5, 4, kRestartStrip, // First half of the hull (split diagonally).
-    7, 6, 8, 5, 9, 11, 10 // Second half of the hull.
+    7, 6, 8, 5, 9, 11, 10, kRestartStrip, // Second half of the hull.
+    13, 12, 14, 15, kRestartStrip, // First corner.
+    17, 16, 18, 19 // Final corner.
 };
 
-static constexpr uint16_t kHull4IndicesAsTris[] =  {
+static constexpr uint16_t kCurveIndicesAsTris[] =  {
     // First half of the hull (split diagonally).
      1,  0,  2,
      0, 11,  2,
@@ -282,358 +226,323 @@ static constexpr uint16_t kHull4IndicesAsTris[] =  {
     8,  5,  9,
     5, 11,  9,
     9, 11, 10,
+
+    // First corner.
+    13, 12, 14,
+    12, 15, 14,
+
+    // Final corner.
+    17, 16, 18,
+    16, 19, 18,
 };
 
-GR_DECLARE_STATIC_UNIQUE_KEY(gHull4IndexBufferKey);
+GR_DECLARE_STATIC_UNIQUE_KEY(gCurveIndexBufferKey);
 
+// Generates a conservative raster hull around a triangle or curve. For triangles we generate
+// additional conservative rasters with coverage ramps around the edges and corners.
+//
+// Triangles are drawn in three steps: (1) Draw a conservative raster of the entire triangle, with a
+// coverage of +1. (2) Draw conservative rasters around each edge, with a coverage ramp from -1 to
+// 0. These edge coverage values convert jagged conservative raster edges into smooth, antialiased
+// ones. (3) Draw conservative rasters (aka pixel-size boxes) around each corner, replacing the
+// previous coverage values with ones that ramp to zero in the bloat vertices that fall outside the
+// triangle.
+//
+// Curves are drawn in two separate passes. Here we just draw a conservative raster around the input
+// points. The Shader takes care of everything else for now. The final curve corners get touched up
+// in a later step by VSCornerImpl.
+void GrCCCoverageProcessor::VSImpl::onEmitCode(EmitArgs& args, GrGPArgs* gpArgs) {
+    const GrCCCoverageProcessor& proc = args.fGP.cast<GrCCCoverageProcessor>();
+    GrGLSLVertexBuilder* v = args.fVertBuilder;
+    int numInputPoints = proc.numInputPoints();
 
-/**
- * Generates a conservative raster hull around a triangle or curve. For triangles we generate
- * additional conservative rasters with coverage ramps around the edges and corners.
- *
- * Triangles are drawn in three steps: (1) Draw a conservative raster of the entire triangle, with a
- * coverage of +1. (2) Draw conservative rasters around each edge, with a coverage ramp from -1 to
- * 0. These edge coverage values convert jagged conservative raster edges into smooth, antialiased
- * ones. (3) Draw conservative rasters (aka pixel-size boxes) around each corner, replacing the
- * previous coverage values with ones that ramp to zero in the bloat vertices that fall outside the
- * triangle.
- *
- * Curves are drawn in two separate passes. Here we just draw a conservative raster around the input
- * points. The Shader takes care of everything else for now. The final curve corners get touched up
- * in a later step by VSCornerImpl.
- */
-class VSHullAndEdgeImpl : public GrCCCoverageProcessor::VSImpl {
-public:
-    VSHullAndEdgeImpl(std::unique_ptr<Shader> shader, int numSides)
-            : VSImpl(std::move(shader)), fNumSides(numSides) {}
+    int inputWidth = (4 == numInputPoints || proc.hasInputWeight()) ? 4 : 3;
+    const char* swizzle = (4 == inputWidth) ? "xyzw" : "xyz";
+    v->codeAppendf("float%ix2 pts = transpose(float2x%i(%s.%s, %s.%s));", inputWidth, inputWidth,
+                   proc.fInstanceAttributes[kInstanceAttribIdx_X].name(), swizzle,
+                   proc.fInstanceAttributes[kInstanceAttribIdx_Y].name(), swizzle);
 
-    void emitVertexPosition(const GrCCCoverageProcessor& proc, GrGLSLVertexBuilder* v,
-                            GrGPArgs* gpArgs, Coverages* outCoverages) const override {
-        Shader::GeometryVars vars;
-        fShader->emitSetupCode(v, "pts", nullptr, "wind", &vars);
+    v->codeAppend ("half wind;");
+    Shader::CalcWind(proc, v, "pts", "wind");
+    if (PrimitiveType::kWeightedTriangles == proc.fPrimitiveType) {
+        SkASSERT(3 == numInputPoints);
+        SkASSERT(kFloat4_GrVertexAttribType ==
+                 proc.fInstanceAttributes[kInstanceAttribIdx_X].type());
+        v->codeAppendf("wind *= %s.w;", proc.fInstanceAttributes[kInstanceAttribIdx_X].name());
+    }
 
-        const char* hullPts = vars.fHullVars.fAlternatePoints;
-        if (!hullPts) {
-            hullPts = "pts";
-        }
+    float bloat = kAABloatRadius;
+#ifdef SK_DEBUG
+    if (proc.debugBloatEnabled()) {
+        bloat *= proc.debugBloat();
+    }
+#endif
+    v->defineConstant("bloat", bloat);
 
-        // Reverse all indices if the wind is counter-clockwise: [0, 1, 2] -> [2, 1, 0].
-        v->codeAppendf("int clockwise_indices = wind > 0 ? %s : 0x%x - %s;",
-                       proc.getAttrib(kAttribIdx_VertexData).fName,
-                       ((fNumSides - 1) << kVertexData_LeftNeighborIdShift) |
-                       ((fNumSides - 1) << kVertexData_RightNeighborIdShift) |
-                       (((1 << kVertexData_RightNeighborIdShift) - 1) ^ 3) |
-                       (fNumSides - 1),
-                       proc.getAttrib(kAttribIdx_VertexData).fName);
+    const char* hullPts = "pts";
+    fShader->emitSetupCode(v, "pts", "wind", (4 == fNumSides) ? &hullPts : nullptr);
 
-        // Here we generate conservative raster geometry for the input polygon. It is the convex
-        // hull of N pixel-size boxes, one centered on each the input points. Each corner has three
-        // vertices, where one or two may cause degenerate triangles. The vertex data tells us how
-        // to offset each vertex. Triangle edges and corners are also handled here using the same
-        // concept. For more details on conservative raster, see:
-        // https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter42.html
-        v->codeAppendf("float2 corner = %s[clockwise_indices & 3];", hullPts);
-        v->codeAppendf("float2 left = %s[clockwise_indices >> %i];",
-                       hullPts, kVertexData_LeftNeighborIdShift);
-        v->codeAppendf("float2 right = %s[(clockwise_indices >> %i) & 3];",
-                       hullPts, kVertexData_RightNeighborIdShift);
+    // Reverse all indices if the wind is counter-clockwise: [0, 1, 2] -> [2, 1, 0].
+    v->codeAppendf("int clockwise_indices = wind > 0 ? %s : 0x%x - %s;",
+                   proc.fVertexAttribute.name(),
+                   ((fNumSides - 1) << kVertexData_LeftNeighborIdShift) |
+                   ((fNumSides - 1) << kVertexData_RightNeighborIdShift) |
+                   (((1 << kVertexData_RightNeighborIdShift) - 1) ^ 3) |
+                   (fNumSides - 1),
+                   proc.fVertexAttribute.name());
 
-        v->codeAppend ("float2 leftbloat = sign(corner - left);");
-        v->codeAppend ("leftbloat = float2(0 != leftbloat.y ? leftbloat.y : leftbloat.x, "
-                                          "0 != leftbloat.x ? -leftbloat.x : -leftbloat.y);");
+    // Here we generate conservative raster geometry for the input polygon. It is the convex
+    // hull of N pixel-size boxes, one centered on each the input points. Each corner has three
+    // vertices, where one or two may cause degenerate triangles. The vertex data tells us how
+    // to offset each vertex. Triangle edges and corners are also handled here using the same
+    // concept. For more details on conservative raster, see:
+    // https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter42.html
+    v->codeAppendf("float2 corner = %s[clockwise_indices & 3];", hullPts);
+    v->codeAppendf("float2 left = %s[clockwise_indices >> %i];",
+                   hullPts, kVertexData_LeftNeighborIdShift);
+    v->codeAppendf("float2 right = %s[(clockwise_indices >> %i) & 3];",
+                   hullPts, kVertexData_RightNeighborIdShift);
 
-        v->codeAppend ("float2 rightbloat = sign(right - corner);");
-        v->codeAppend ("rightbloat = float2(0 != rightbloat.y ? rightbloat.y : rightbloat.x, "
-                                           "0 != rightbloat.x ? -rightbloat.x : -rightbloat.y);");
+    v->codeAppend ("float2 leftbloat = sign(corner - left);");
+    v->codeAppend ("leftbloat = float2(0 != leftbloat.y ? leftbloat.y : leftbloat.x, "
+                                      "0 != leftbloat.x ? -leftbloat.x : -leftbloat.y);");
 
-        v->codeAppend ("bool2 left_right_notequal = notEqual(leftbloat, rightbloat);");
+    v->codeAppend ("float2 rightbloat = sign(right - corner);");
+    v->codeAppend ("rightbloat = float2(0 != rightbloat.y ? rightbloat.y : rightbloat.x, "
+                                       "0 != rightbloat.x ? -rightbloat.x : -rightbloat.y);");
 
-        v->codeAppend ("float2 bloatdir = leftbloat;");
+    v->codeAppend ("bool2 left_right_notequal = notEqual(leftbloat, rightbloat);");
 
-        if (3 == fNumSides) { // Only triangles emit corner boxes.
-            v->codeAppend ("float2 leftdir = corner - left;");
-            v->codeAppend ("leftdir = (float2(0) != leftdir) ? normalize(leftdir) : float2(1, 0);");
+    v->codeAppend ("float2 bloatdir = leftbloat;");
 
-            v->codeAppend ("float2 rightdir = right - corner;");
-            v->codeAppend ("rightdir = (float2(0) != rightdir)"
-                                   "? normalize(rightdir) : float2(1, 0);");
+    v->codeAppend ("float2 leftdir = corner - left;");
+    v->codeAppend ("leftdir = (float2(0) != leftdir) ? normalize(leftdir) : float2(1, 0);");
 
-            v->codeAppendf("if (0 != (%s & %i)) {", // Are we a corner?
-                           proc.getAttrib(kAttribIdx_VertexData).fName, kVertexData_IsCornerBit);
+    v->codeAppend ("float2 rightdir = right - corner;");
+    v->codeAppend ("rightdir = (float2(0) != rightdir) ? normalize(rightdir) : float2(1, 0);");
 
-                               // In corner boxes, all 4 coverage values will not map linearly.
-                               // Therefore it is important to align the box so its diagonal shared
-                               // edge points out of the triangle, in the direction that ramps to 0.
-            v->codeAppend (    "bloatdir = float2(leftdir.x > rightdir.x ? +1 : -1, "
-                                                 "leftdir.y > rightdir.y ? +1 : -1);");
+    v->codeAppendf("if (0 != (%s & %i)) {",  // Are we a corner?
+                   proc.fVertexAttribute.name(), kVertexData_IsCornerBit);
 
-                               // For corner boxes, we hack left_right_notequal to always true. This
-                               // in turn causes the upcoming code to always rotate, generating all
-                               // 4 vertices of the corner box.
-            v->codeAppendf(    "left_right_notequal = bool2(true);");
-            v->codeAppend ("}");
-        }
+                       // In corner boxes, all 4 coverage values will not map linearly.
+                       // Therefore it is important to align the box so its diagonal shared
+                       // edge points out of the triangle, in the direction that ramps to 0.
+    v->codeAppend (    "bloatdir = float2(leftdir.x > rightdir.x ? +1 : -1, "
+                                         "leftdir.y > rightdir.y ? +1 : -1);");
 
-        // At each corner of the polygon, our hull will have either 1, 2, or 3 vertices (or 4 if
-        // it's a corner box). We begin with this corner's first raster vertex (leftbloat), then
-        // continue rotating 90 degrees clockwise until we reach the desired raster vertex for this
-        // invocation. Corners with less than 3 corresponding raster vertices will result in
-        // redundant vertices and degenerate triangles.
-        v->codeAppendf("int bloatidx = (%s >> %i) & 3;",
-                       proc.getAttrib(kAttribIdx_VertexData).fName, kVertexData_BloatIdxShift);
-        v->codeAppend ("switch (bloatidx) {");
-        if (3 == fNumSides) { // Only triangles emit corner boxes.
-            v->codeAppend (    "case 3:");
-                                    // Only corners will have bloatidx=3, and corners always rotate.
-            v->codeAppend (        "bloatdir = float2(-bloatdir.y, +bloatdir.x);"); // 90 deg CW.
-                                   // fallthru.
-        }
-        v->codeAppend (    "case 2:");
-        v->codeAppendf(        "if (all(left_right_notequal)) {");
-        v->codeAppend (            "bloatdir = float2(-bloatdir.y, +bloatdir.x);"); // 90 deg CW.
-        v->codeAppend (        "}");
-                               // fallthru.
-        v->codeAppend (    "case 1:");
-        v->codeAppendf(        "if (any(left_right_notequal)) {");
-        v->codeAppend (            "bloatdir = float2(-bloatdir.y, +bloatdir.x);"); // 90 deg CW.
-        v->codeAppend (        "}");
-                               // fallthru.
+                       // For corner boxes, we hack left_right_notequal to always true. This
+                       // in turn causes the upcoming code to always rotate, generating all
+                       // 4 vertices of the corner box.
+    v->codeAppendf(    "left_right_notequal = bool2(true);");
+    v->codeAppend ("}");
+
+    // At each corner of the polygon, our hull will have either 1, 2, or 3 vertices (or 4 if
+    // it's a corner box). We begin with this corner's first raster vertex (leftbloat), then
+    // continue rotating 90 degrees clockwise until we reach the desired raster vertex for this
+    // invocation. Corners with less than 3 corresponding raster vertices will result in
+    // redundant vertices and degenerate triangles.
+    v->codeAppendf("int bloatidx = (%s >> %i) & 3;", proc.fVertexAttribute.name(),
+                   kVertexData_BloatIdxShift);
+    v->codeAppend ("switch (bloatidx) {");
+    v->codeAppend (    "case 3:");
+                            // Only corners will have bloatidx=3, and corners always rotate.
+    v->codeAppend (        "bloatdir = float2(-bloatdir.y, +bloatdir.x);"); // 90 deg CW.
+                           // fallthru.
+    v->codeAppend (    "case 2:");
+    v->codeAppendf(        "if (all(left_right_notequal)) {");
+    v->codeAppend (            "bloatdir = float2(-bloatdir.y, +bloatdir.x);"); // 90 deg CW.
+    v->codeAppend (        "}");
+                           // fallthru.
+    v->codeAppend (    "case 1:");
+    v->codeAppendf(        "if (any(left_right_notequal)) {");
+    v->codeAppend (            "bloatdir = float2(-bloatdir.y, +bloatdir.x);"); // 90 deg CW.
+    v->codeAppend (        "}");
+                           // fallthru.
+    v->codeAppend ("}");
+
+    v->codeAppend ("float2 vertex = corner + bloatdir * bloat;");
+    gpArgs->fPositionVar.set(kFloat2_GrSLType, "vertex");
+
+    // Hulls have a coverage of +1 all around.
+    v->codeAppend ("half coverage = +1;");
+
+    if (3 == fNumSides) {
+        v->codeAppend ("half left_coverage; {");
+        Shader::CalcEdgeCoverageAtBloatVertex(v, "left", "corner", "bloatdir", "left_coverage");
         v->codeAppend ("}");
 
-        v->codeAppend ("float2 vertex = corner + bloatdir * bloat;");
-        gpArgs->fPositionVar.set(kFloat2_GrSLType, "vertex");
+        v->codeAppend ("half right_coverage; {");
+        Shader::CalcEdgeCoverageAtBloatVertex(v, "corner", "right", "bloatdir", "right_coverage");
+        v->codeAppend ("}");
 
-        // For triangles, we also emit coverage and attenuation.
-        if (3 == fNumSides) {
-            // The hull has a coverage of +1 all around.
-            v->codeAppend ("half coverage = +1;");
+        v->codeAppendf("if (0 != (%s & %i)) {",  // Are we an edge?
+                       proc.fVertexAttribute.name(), kVertexData_IsEdgeBit);
+        v->codeAppend (    "coverage = left_coverage;");
+        v->codeAppend ("}");
 
-            // Corner boxes require attenuation.
-            v->codeAppend ("half2 attenuated_coverage = half2(0);");
-
-            v->codeAppendf("if (0 != (%s & %i)) {", // Are we an edge OR corner?
-                           proc.getAttrib(kAttribIdx_VertexData).fName,
-                           kVertexData_IsEdgeBit | kVertexData_IsCornerBit);
-            Shader::CalcEdgeCoverageAtBloatVertex(v, "left", "corner", "bloatdir", "coverage");
-            v->codeAppend ("}");
-
-            v->codeAppendf("if (0 != (%s & %i)) {", // Are we a corner?
-                           proc.getAttrib(kAttribIdx_VertexData).fName, kVertexData_IsCornerBit);
-            v->codeAppend (    "half left_coverage = coverage;");
-
-            v->codeAppend (    "half right_coverage;");
-            Shader::CalcEdgeCoverageAtBloatVertex(v, "corner", "right", "bloatdir",
-                                                  "right_coverage");
-
-            v->codeAppend (    "half attenuation;");
-            Shader::CalcCornerCoverageAttenuation(v, "leftdir", "rightdir", "attenuation");
-
-                               // For corners, "coverage" erases the values that were written
-                               // previously by the hull and edge geometry.
-            v->codeAppend (    "coverage = -1 - left_coverage - right_coverage;");
-
-                               // The x and y components of "attenuated_coverage" are multiplied
-                               // together by the fragment shader. They ramp to 0 with attenuation
-                               // in the diagonal that points out of the triangle, and linearly from
-                               // left-edge coverage to right in the opposite diagonal. bloatidx=0
-                               // is the outermost vertex; the one that has attenuation.
-            v->codeAppend (    "attenuated_coverage = (0 == bloatidx)"
-                                       "? half2(0, attenuation) : half2(1);");
-            v->codeAppend (    "if (1 == bloatidx || 2 == bloatidx) {");
-            v->codeAppend (        "attenuated_coverage.x += right_coverage;");
-            v->codeAppend (    "}");
-            v->codeAppend (    "if (bloatidx >= 2) {");
-            v->codeAppend (        "attenuated_coverage.x += left_coverage;");
-            v->codeAppend (    "}");
-            v->codeAppend ("}");
-
-            v->codeAppendf("if (0 != (%s & %i)) {", // Invert coverage?
-                           proc.getAttrib(kAttribIdx_VertexData).fName,
-                           kVertexData_InvertNegativeCoverageBit);
-            v->codeAppend (    "coverage = -1 - coverage;");
-            v->codeAppend ("}");
-
-            outCoverages->fCoverage = "coverage";
-            outCoverages->fAttenuatedCoverage = "attenuated_coverage";
-        }
+        v->codeAppendf("if (0 != (%s & %i)) {",  // Invert coverage?
+                       proc.fVertexAttribute.name(),
+                       kVertexData_InvertNegativeCoverageBit);
+        v->codeAppend (    "coverage = -1 - coverage;");
+        v->codeAppend ("}");
     }
 
-private:
-    const int fNumSides;
-};
+    // Non-corner geometry should have zero effect from corner coverage.
+    v->codeAppend ("half2 corner_coverage = half2(0);");
 
-static constexpr uint16_t kCornerIndicesAsStrips[] =  {
-    0, 1, 2, 3, kRestartStrip, // First corner.
-    4, 5, 6, 7 // Second corner.
-};
-
-static constexpr uint16_t kCornerIndicesAsTris[] =  {
-    // First corner.
-    0,  1,  2,
-    1,  3,  2,
-
-    // Second corner.
-    4,  5,  6,
-    5,  7,  6,
-};
-
-GR_DECLARE_STATIC_UNIQUE_KEY(gCornerIndexBufferKey);
-
-/**
- * Generates conservative rasters around corners. (See comments for RenderPass)
- */
-class VSCornerImpl : public GrCCCoverageProcessor::VSImpl {
-public:
-    VSCornerImpl(std::unique_ptr<Shader> shader) : VSImpl(std::move(shader)) {}
-
-    void emitVertexPosition(const GrCCCoverageProcessor&, GrGLSLVertexBuilder* v, GrGPArgs* gpArgs,
-                            Coverages* /*outCoverages*/) const override {
-        Shader::GeometryVars vars;
-        v->codeAppend ("int corner_id = sk_VertexID / 4;");
-        fShader->emitSetupCode(v, "pts", "corner_id", "wind", &vars);
-
-        v->codeAppendf("float2 vertex = %s;", vars.fCornerVars.fPoint);
-        v->codeAppend ("vertex.x += (0 == (sk_VertexID & 2)) ? -bloat : +bloat;");
-        v->codeAppend ("vertex.y += (0 == (sk_VertexID & 1)) ? -bloat : +bloat;");
-
-        gpArgs->fPositionVar.set(kFloat2_GrSLType, "vertex");
+    v->codeAppendf("if (0 != (%s & %i)) {",  // Are we a corner?
+                   proc.fVertexAttribute.name(), kVertexData_IsCornerBit);
+                       // We use coverage=-1 to erase what the hull geometry wrote.
+                       //
+                       // In the context of curves, this effectively means "wind = -wind" and
+                       // causes the Shader to erase what it had written previously for the hull.
+                       //
+                       // For triangles it just erases the "+1" value written by the hull geometry.
+    v->codeAppend (    "coverage = -1;");
+    if (3 == fNumSides) {
+                       // Triangle corners also have to erase what the edge geometry wrote.
+        v->codeAppend ("coverage -= left_coverage + right_coverage;");
     }
-};
+
+                       // Corner boxes require attenuated coverage.
+    v->codeAppend (    "half attenuation; {");
+    Shader::CalcCornerAttenuation(v, "leftdir", "rightdir", "attenuation");
+    v->codeAppend (    "}");
+
+                       // Attenuate corner coverage towards the outermost vertex (where bloatidx=0).
+                       // This is all that curves need: At each vertex of the corner box, the curve
+                       // Shader will calculate the curve's local coverage value, interpolate it
+                       // alongside our attenuation parameter, and multiply the two together for a
+                       // final coverage value.
+    v->codeAppend (    "corner_coverage = (0 == bloatidx) ? half2(0, attenuation) : half2(1);");
+
+    if (3 == fNumSides) {
+                       // For triangles we also provide the actual coverage values at each vertex of
+                       // the corner box.
+        v->codeAppend ("if (1 == bloatidx || 2 == bloatidx) {");
+        v->codeAppend (    "corner_coverage.x += right_coverage;");
+        v->codeAppend ("}");
+        v->codeAppend ("if (bloatidx >= 2) {");
+        v->codeAppend (    "corner_coverage.x += left_coverage;");
+        v->codeAppend ("}");
+    }
+    v->codeAppend ("}");
+
+    GrGLSLVaryingHandler* varyingHandler = args.fVaryingHandler;
+    v->codeAppend ("coverage *= wind;");
+    v->codeAppend ("corner_coverage.x *= wind;");
+    fShader->emitVaryings(varyingHandler, GrGLSLVarying::Scope::kVertToFrag, &v->code(),
+                          gpArgs->fPositionVar.c_str(), "coverage", "corner_coverage");
+
+    varyingHandler->emitAttributes(proc);
+    SkASSERT(!args.fFPCoordTransformHandler->nextCoordTransform());
+
+    // Fragment shader.
+    fShader->emitFragmentCode(proc, args.fFragBuilder, args.fOutputColor, args.fOutputCoverage);
+}
 
 void GrCCCoverageProcessor::initVS(GrResourceProvider* rp) {
     SkASSERT(Impl::kVertexShader == fImpl);
     const GrCaps& caps = *rp->caps();
 
-    switch (fRenderPass) {
-        case RenderPass::kTriangles: {
+    switch (fPrimitiveType) {
+        case PrimitiveType::kTriangles:
+        case PrimitiveType::kWeightedTriangles: {
             GR_DEFINE_STATIC_UNIQUE_KEY(gTriangleVertexBufferKey);
-            fVertexBuffer = rp->findOrMakeStaticBuffer(kVertex_GrBufferType,
-                                                       sizeof(kTriangleVertices),
-                                                       kTriangleVertices,
-                                                       gTriangleVertexBufferKey);
+            fVSVertexBuffer = rp->findOrMakeStaticBuffer(kVertex_GrBufferType,
+                                                         sizeof(kTriangleVertices),
+                                                         kTriangleVertices,
+                                                         gTriangleVertexBufferKey);
             GR_DEFINE_STATIC_UNIQUE_KEY(gTriangleIndexBufferKey);
             if (caps.usePrimitiveRestart()) {
-                fIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
-                                                          sizeof(kTriangleIndicesAsStrips),
-                                                          kTriangleIndicesAsStrips,
-                                                          gTriangleIndexBufferKey);
-                fNumIndicesPerInstance = SK_ARRAY_COUNT(kTriangleIndicesAsStrips);
+                fVSIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
+                                                            sizeof(kTriangleIndicesAsStrips),
+                                                            kTriangleIndicesAsStrips,
+                                                            gTriangleIndexBufferKey);
+                fVSNumIndicesPerInstance = SK_ARRAY_COUNT(kTriangleIndicesAsStrips);
             } else {
-                fIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
-                                                          sizeof(kTriangleIndicesAsTris),
-                                                          kTriangleIndicesAsTris,
-                                                          gTriangleIndexBufferKey);
-                fNumIndicesPerInstance = SK_ARRAY_COUNT(kTriangleIndicesAsTris);
+                fVSIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
+                                                            sizeof(kTriangleIndicesAsTris),
+                                                            kTriangleIndicesAsTris,
+                                                            gTriangleIndexBufferKey);
+                fVSNumIndicesPerInstance = SK_ARRAY_COUNT(kTriangleIndicesAsTris);
             }
             break;
         }
 
-        case RenderPass::kTriangleCorners:
-            SK_ABORT("RenderPass::kTriangleCorners is unused by VSImpl.");
-
-        case RenderPass::kQuadratics:
-        case RenderPass::kCubics: {
-            GR_DEFINE_STATIC_UNIQUE_KEY(gHull4VertexBufferKey);
-            fVertexBuffer = rp->findOrMakeStaticBuffer(kVertex_GrBufferType, sizeof(kHull4Vertices),
-                                                       kHull4Vertices, gHull4VertexBufferKey);
-            GR_DEFINE_STATIC_UNIQUE_KEY(gHull4IndexBufferKey);
+        case PrimitiveType::kQuadratics:
+        case PrimitiveType::kCubics:
+        case PrimitiveType::kConics: {
+            GR_DEFINE_STATIC_UNIQUE_KEY(gCurveVertexBufferKey);
+            fVSVertexBuffer = rp->findOrMakeStaticBuffer(kVertex_GrBufferType,
+                                                         sizeof(kCurveVertices), kCurveVertices,
+                                                         gCurveVertexBufferKey);
+            GR_DEFINE_STATIC_UNIQUE_KEY(gCurveIndexBufferKey);
             if (caps.usePrimitiveRestart()) {
-                fIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
-                                                          sizeof(kHull4IndicesAsStrips),
-                                                          kHull4IndicesAsStrips,
-                                                          gHull4IndexBufferKey);
-                fNumIndicesPerInstance = SK_ARRAY_COUNT(kHull4IndicesAsStrips);
+                fVSIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
+                                                            sizeof(kCurveIndicesAsStrips),
+                                                            kCurveIndicesAsStrips,
+                                                            gCurveIndexBufferKey);
+                fVSNumIndicesPerInstance = SK_ARRAY_COUNT(kCurveIndicesAsStrips);
             } else {
-                fIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
-                                                          sizeof(kHull4IndicesAsTris),
-                                                          kHull4IndicesAsTris,
-                                                          gHull4IndexBufferKey);
-                fNumIndicesPerInstance = SK_ARRAY_COUNT(kHull4IndicesAsTris);
+                fVSIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
+                                                            sizeof(kCurveIndicesAsTris),
+                                                            kCurveIndicesAsTris,
+                                                            gCurveIndexBufferKey);
+                fVSNumIndicesPerInstance = SK_ARRAY_COUNT(kCurveIndicesAsTris);
             }
             break;
         }
-
-        case RenderPass::kQuadraticCorners:
-        case RenderPass::kCubicCorners: {
-            GR_DEFINE_STATIC_UNIQUE_KEY(gCornerIndexBufferKey);
-            if (caps.usePrimitiveRestart()) {
-                fIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
-                                                          sizeof(kCornerIndicesAsStrips),
-                                                          kCornerIndicesAsStrips,
-                                                          gCornerIndexBufferKey);
-                fNumIndicesPerInstance = SK_ARRAY_COUNT(kCornerIndicesAsStrips);
-            } else {
-                fIndexBuffer = rp->findOrMakeStaticBuffer(kIndex_GrBufferType,
-                                                          sizeof(kCornerIndicesAsTris),
-                                                          kCornerIndicesAsTris,
-                                                          gCornerIndexBufferKey);
-                fNumIndicesPerInstance = SK_ARRAY_COUNT(kCornerIndicesAsTris);
-             }
-             break;
-         }
     }
 
-    if (RenderPassIsCubic(fRenderPass) || WindMethod::kInstanceData == fWindMethod) {
-        SkASSERT(WindMethod::kCrossProduct == fWindMethod || 3 == this->numInputPoints());
-
-        SkASSERT(kAttribIdx_X == this->numAttribs());
-        this->addInstanceAttrib("X", kFloat4_GrVertexAttribType);
-
-        SkASSERT(kAttribIdx_Y == this->numAttribs());
-        this->addInstanceAttrib("Y", kFloat4_GrVertexAttribType);
-
-        SkASSERT(offsetof(QuadPointInstance, fX) == this->getAttrib(kAttribIdx_X).fOffsetInRecord);
-        SkASSERT(offsetof(QuadPointInstance, fY) == this->getAttrib(kAttribIdx_Y).fOffsetInRecord);
-        SkASSERT(sizeof(QuadPointInstance) == this->getInstanceStride());
+    GrVertexAttribType xyAttribType;
+    if (4 == this->numInputPoints() || this->hasInputWeight()) {
+        GR_STATIC_ASSERT(offsetof(QuadPointInstance, fX) == 0);
+        GR_STATIC_ASSERT(sizeof(QuadPointInstance::fX) ==
+                         GrVertexAttribTypeSize(kFloat4_GrVertexAttribType));
+        GR_STATIC_ASSERT(sizeof(QuadPointInstance::fY) ==
+                         GrVertexAttribTypeSize(kFloat4_GrVertexAttribType));
+        xyAttribType = kFloat4_GrVertexAttribType;
     } else {
-        SkASSERT(kAttribIdx_X == this->numAttribs());
-        this->addInstanceAttrib("X", kFloat3_GrVertexAttribType);
-
-        SkASSERT(kAttribIdx_Y == this->numAttribs());
-        this->addInstanceAttrib("Y", kFloat3_GrVertexAttribType);
-
-        SkASSERT(offsetof(TriPointInstance, fX) == this->getAttrib(kAttribIdx_X).fOffsetInRecord);
-        SkASSERT(offsetof(TriPointInstance, fY) == this->getAttrib(kAttribIdx_Y).fOffsetInRecord);
-        SkASSERT(sizeof(TriPointInstance) == this->getInstanceStride());
+        GR_STATIC_ASSERT(offsetof(TriPointInstance, fX) == 0);
+        GR_STATIC_ASSERT(sizeof(TriPointInstance::fX) ==
+                         GrVertexAttribTypeSize(kFloat3_GrVertexAttribType));
+        GR_STATIC_ASSERT(sizeof(TriPointInstance::fY) ==
+                         GrVertexAttribTypeSize(kFloat3_GrVertexAttribType));
+        xyAttribType = kFloat3_GrVertexAttribType;
     }
-
-    if (fVertexBuffer) {
-        SkASSERT(kAttribIdx_VertexData == this->numAttribs());
-        this->addVertexAttrib("vertexdata", kInt_GrVertexAttribType);
-
-        SkASSERT(sizeof(int32_t) == this->getVertexStride());
-    }
+    fInstanceAttributes[kInstanceAttribIdx_X] = {"X", xyAttribType};
+    fInstanceAttributes[kInstanceAttribIdx_Y] = {"Y", xyAttribType};
+    this->setInstanceAttributeCnt(2);
+    fVertexAttribute = {"vertexdata", kInt_GrVertexAttribType};
+    this->setVertexAttributeCnt(1);
 
     if (caps.usePrimitiveRestart()) {
-        this->setWillUsePrimitiveRestart();
-        fPrimitiveType = GrPrimitiveType::kTriangleStrip;
+        fVSTriangleType = GrPrimitiveType::kTriangleStrip;
     } else {
-        fPrimitiveType = GrPrimitiveType::kTriangles;
+        fVSTriangleType = GrPrimitiveType::kTriangles;
     }
 }
 
 void GrCCCoverageProcessor::appendVSMesh(GrBuffer* instanceBuffer, int instanceCount,
                                          int baseInstance, SkTArray<GrMesh>* out) const {
     SkASSERT(Impl::kVertexShader == fImpl);
-    GrMesh& mesh = out->emplace_back(fPrimitiveType);
-    mesh.setIndexedInstanced(fIndexBuffer.get(), fNumIndicesPerInstance, instanceBuffer,
-                             instanceCount, baseInstance);
-    if (fVertexBuffer) {
-        mesh.setVertexData(fVertexBuffer.get(), 0);
-    }
+    GrMesh& mesh = out->emplace_back(fVSTriangleType);
+    auto primitiveRestart = GrPrimitiveRestart(GrPrimitiveType::kTriangleStrip == fVSTriangleType);
+    mesh.setIndexedInstanced(fVSIndexBuffer.get(), fVSNumIndicesPerInstance, instanceBuffer,
+                             instanceCount, baseInstance, primitiveRestart);
+    mesh.setVertexData(fVSVertexBuffer.get(), 0);
 }
 
 GrGLSLPrimitiveProcessor* GrCCCoverageProcessor::createVSImpl(std::unique_ptr<Shader> shadr) const {
-    switch (fRenderPass) {
-        case RenderPass::kTriangles:
-            return new VSHullAndEdgeImpl(std::move(shadr), 3);
-        case RenderPass::kQuadratics:
-        case RenderPass::kCubics:
-            return new VSHullAndEdgeImpl(std::move(shadr), 4);
-        case RenderPass::kTriangleCorners:
-        case RenderPass::kQuadraticCorners:
-        case RenderPass::kCubicCorners:
-            return new VSCornerImpl(std::move(shadr));
+    switch (fPrimitiveType) {
+        case PrimitiveType::kTriangles:
+        case PrimitiveType::kWeightedTriangles:
+            return new VSImpl(std::move(shadr), 3);
+        case PrimitiveType::kQuadratics:
+        case PrimitiveType::kCubics:
+        case PrimitiveType::kConics:
+            return new VSImpl(std::move(shadr), 4);
     }
     SK_ABORT("Invalid RenderPass");
     return nullptr;

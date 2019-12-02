@@ -6,11 +6,13 @@
  */
 
 #include "SkAtomics.h"
-#include "SkSurface_Base.h"
-#include "SkImagePriv.h"
 #include "SkCanvas.h"
-
 #include "SkFontLCDConfig.h"
+#include "SkImagePriv.h"
+#include "SkSurface_Base.h"
+
+#include "GrBackendSurface.h"
+
 static SkPixelGeometry compute_default_geometry() {
     SkFontLCDConfig::LCDOrder order = SkFontLCDConfig::GetSubpixelOrder();
     if (SkFontLCDConfig::kNONE_LCDOrder == order) {
@@ -68,6 +70,14 @@ SkSurface_Base::~SkSurface_Base() {
     if (fCachedCanvas) {
         fCachedCanvas->setSurfaceBase(nullptr);
     }
+}
+
+GrBackendTexture SkSurface_Base::onGetBackendTexture(BackendHandleAccess) {
+    return GrBackendTexture(); // invalid
+}
+
+GrBackendRenderTarget SkSurface_Base::onGetBackendRenderTarget(BackendHandleAccess) {
+    return GrBackendRenderTarget(); // invalid
 }
 
 void SkSurface_Base::onDraw(SkCanvas* canvas, SkScalar x, SkScalar y, const SkPaint* paint) {
@@ -208,12 +218,12 @@ void SkSurface::writePixels(const SkBitmap& src, int x, int y) {
     }
 }
 
-GrBackendObject SkSurface::getTextureHandle(BackendHandleAccess access) {
-    return asSB(this)->onGetTextureHandle(access);
+GrBackendTexture SkSurface::getBackendTexture(BackendHandleAccess access) {
+    return asSB(this)->onGetBackendTexture(access);
 }
 
-bool SkSurface::getRenderTargetHandle(GrBackendObject* obj, BackendHandleAccess access) {
-    return asSB(this)->onGetRenderTargetHandle(obj, access);
+GrBackendRenderTarget SkSurface::getBackendRenderTarget(BackendHandleAccess access) {
+    return asSB(this)->onGetBackendRenderTarget(access);
 }
 
 void SkSurface::prepareForExternalIO() {
@@ -274,6 +284,11 @@ sk_sp<SkSurface> SkSurface::MakeNull(int width, int height) {
 
 sk_sp<SkSurface> SkSurface::MakeRenderTarget(GrContext*, SkBudgeted, const SkImageInfo&, int,
                                              GrSurfaceOrigin, const SkSurfaceProps*, bool) {
+    return nullptr;
+}
+
+sk_sp<SkSurface> SkSurface::MakeRenderTarget(GrContext*, const SkSurfaceCharacterization&,
+                                             SkBudgeted) {
     return nullptr;
 }
 

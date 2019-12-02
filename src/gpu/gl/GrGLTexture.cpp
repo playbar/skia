@@ -71,8 +71,7 @@ void GrGLTexture::init(const GrSurfaceDesc& desc, const IDDesc& idDesc) {
     SkASSERT(0 != idDesc.fInfo.fFormat);
     if (idDesc.fInfo.fTarget == GR_GL_TEXTURE_RECTANGLE ||
         idDesc.fInfo.fTarget == GR_GL_TEXTURE_EXTERNAL) {
-        this->setDoesNotSupportMipMaps();
-        this->setIsClampOnly();
+        this->setIsGLTextureRectangleOrExternal();
     }
     fTexParams.invalidate();
     fTexParamsTimestamp = GrGpu::kExpiredTimestamp;
@@ -96,10 +95,6 @@ void GrGLTexture::onAbandon() {
     fInfo.fID = 0;
     this->invokeReleaseProc();
     INHERITED::onAbandon();
-}
-
-GrBackendObject GrGLTexture::getTextureHandle() const {
-    return reinterpret_cast<GrBackendObject>(&fInfo);
 }
 
 GrBackendTexture GrGLTexture::getBackendTexture() const {
@@ -138,21 +133,16 @@ void GrGLTexture::dumpMemoryStatistics(SkTraceMemoryDump* traceMemoryDump) const
     // Dump as skia/gpu_resources/resource_#/texture, to avoid conflicts in the
     // GrGLTextureRenderTarget case, where multiple things may dump to the same resource. This
     // has no downside in the normal case.
-    SkString dumpName("skia/gpu_resources/resource_");
-    dumpName.appendU32(this->uniqueID().asUInt());
-    dumpName.append("/texture");
+    SkString resourceName = this->getResourceName();
+    resourceName.append("/texture");
 
     // As we are only dumping our texture memory (not any additional memory tracked by classes
     // which may inherit from us), specifically call GrGLTexture::gpuMemorySize to avoid
     // hitting an override.
-    size_t size = GrGLTexture::gpuMemorySize();
-    traceMemoryDump->dumpNumericValue(dumpName.c_str(), "size", "bytes", size);
-
-    if (this->isPurgeable()) {
-        traceMemoryDump->dumpNumericValue(dumpName.c_str(), "purgeable_size", "bytes", size);
-    }
+    this->dumpMemoryStatisticsPriv(traceMemoryDump, resourceName, "Texture",
+                                   GrGLTexture::gpuMemorySize());
 
     SkString texture_id;
     texture_id.appendU32(this->textureID());
-    traceMemoryDump->setMemoryBacking(dumpName.c_str(), "gl_texture", texture_id.c_str());
+    traceMemoryDump->setMemoryBacking(resourceName.c_str(), "gl_texture", texture_id.c_str());
 }

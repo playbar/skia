@@ -16,7 +16,7 @@
 #include "SkSLString.h"
 #include "SkSLStringStream.h"
 
-#ifndef SKSL_STANDALONE
+#if !defined(SKSL_STANDALONE) && SK_SUPPORT_GPU
 #include "GrContextOptions.h"
 #include "GrShaderCaps.h"
 #endif
@@ -31,9 +31,11 @@
 #endif // SK_BUILD_FOR_WIN
 #endif // SKSL_STANDALONE
 
+class GrShaderCaps;
+
 namespace SkSL {
 
-#ifdef SKSL_STANDALONE
+#if defined(SKSL_STANDALONE) || !SK_SUPPORT_GPU
 
 // we're being compiled standalone, so we don't have access to caps...
 enum GrGLSLGeneration {
@@ -103,10 +105,6 @@ public:
         return true;
     }
 
-    bool texelFetchSupport() const {
-        return true;
-    }
-
     bool imageLoadStoreSupport() const {
         return true;
     }
@@ -151,6 +149,14 @@ public:
         return nullptr;
     }
 
+    const char* externalTextureExtensionString() const {
+        return nullptr;
+    }
+
+    const char* secondExternalTextureExtensionString() const {
+        return nullptr;
+    }
+
     const char* versionDeclString() const {
         return "";
     }
@@ -169,6 +175,10 @@ public:
 
     bool incompleteShortIntPrecision() const {
         return false;
+    }
+
+    const char* fbFetchColorName() const {
+        return nullptr;
     }
 };
 
@@ -292,7 +302,6 @@ public:
         result->fExternalTextureSupport = true;
         result->fFBFetchSupport = false;
         result->fDropsTileOnZeroDivide = true;
-        result->fTexelFetchSupport = true;
         result->fCanUseAnyFunctionInShader = false;
         return result;
     }
@@ -327,13 +336,9 @@ NORETURN void sksl_abort();
 } // namespace
 
 #ifdef SKSL_STANDALONE
-#define ASSERT(x) (void)((x) || (ABORT("failed assert(%s): %s:%d\n", #x, __FILE__, __LINE__), 0))
-#define ASSERT_RESULT(x) ASSERT(x)
-#define SKSL_DEBUGCODE(x) x
-#else
-#define ASSERT SkASSERT
-#define ASSERT_RESULT(x) SkAssertResult(x)
-#define SKSL_DEBUGCODE(x) SkDEBUGCODE(x)
+#define SkASSERT(x)
+#define SkAssertResult(x) x
+#define SkDEBUGCODE(x)
 #endif
 
 #define SKSL_WARN_UNUSED_RESULT __attribute__((warn_unused_result))

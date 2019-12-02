@@ -24,11 +24,12 @@
 #include "ccpr/GrCCCoverageProcessor.h"
 #include "ccpr/GrCCGeometry.h"
 #include "gl/GrGLGpu.cpp"
+#include "glsl/GrGLSLFragmentProcessor.h"
 #include "ops/GrDrawOp.h"
 
 using TriPointInstance = GrCCCoverageProcessor::TriPointInstance;
 using QuadPointInstance = GrCCCoverageProcessor::QuadPointInstance;
-using RenderPass = GrCCCoverageProcessor::RenderPass;
+using PrimitiveType = GrCCCoverageProcessor::PrimitiveType;
 
 static constexpr float kDebugBloat = 40;
 
@@ -56,12 +57,14 @@ private:
 
     void updateGpuData();
 
-    RenderPass fRenderPass = RenderPass::kTriangles;
+    PrimitiveType fPrimitiveType = PrimitiveType::kTriangles;
     SkCubicType fCubicType;
     SkMatrix fCubicKLM;
 
     SkPoint fPoints[4] = {
             {100.05f, 100.05f}, {400.75f, 100.05f}, {400.75f, 300.95f}, {100.05f, 300.95f}};
+
+    float fConicWeight = .5;
 
     SkTArray<TriPointInstance> fTriPointInstances;
     SkTArray<QuadPointInstance> fQuadPointInstances;
@@ -83,14 +86,12 @@ public:
 
 private:
     FixedFunctionFlags fixedFunctionFlags() const override { return FixedFunctionFlags::kNone; }
-    RequiresDstTexture finalize(const GrCaps&, const GrAppliedClip*,
-                                GrPixelConfigIsClamped) override {
+    RequiresDstTexture finalize(const GrCaps&, const GrAppliedClip*) override {
         return RequiresDstTexture::kNo;
     }
     bool onCombineIfPossible(GrOp* other, const GrCaps& caps) override { return false; }
     void onPrepare(GrOpFlushState*) override {}
     void onExecute(GrOpFlushState*) override;
-    void drawRenderPass(GrOpFlushState*, RenderPass);
 
     CCPRGeometryView* fView;
 
@@ -149,14 +150,22 @@ void CCPRGeometryView::onDrawContent(SkCanvas* canvas) {
 
     SkPath outline;
     outline.moveTo(fPoints[0]);
-    if (RenderPass::kCubics == fRenderPass) {
-        outline.cubicTo(fPoints[1], fPoints[2], fPoints[3]);
-    } else if (RenderPass::kQuadratics == fRenderPass) {
-        outline.quadTo(fPoints[1], fPoints[3]);
-    } else {
-        outline.lineTo(fPoints[1]);
-        outline.lineTo(fPoints[3]);
-        outline.close();
+    switch (fPrimitiveType) {
+        case PrimitiveType::kTriangles:
+        case PrimitiveType::kWeightedTriangles:
+            outline.lineTo(fPoints[1]);
+            outline.lineTo(fPoints[3]);
+            outline.close();
+            break;
+        case PrimitiveType::kQuadratics:
+            outline.quadTo(fPoints[1], fPoints[3]);
+            break;
+        case PrimitiveType::kCubics:
+            outline.cubicTo(fPoints[1], fPoints[2], fPoints[3]);
+            break;
+        case PrimitiveType::kConics:
+            outline.conicTo(fPoints[1], fPoints[3], fConicWeight);
+            break;
     }
 
     SkPaint outlinePaint;
@@ -205,9 +214,12 @@ void CCPRGeometryView::onDrawContent(SkCanvas* canvas) {
                       SkRect::MakeIWH(this->width(), this->height()));
 
         // Add label.
-        caption.appendf("RenderPass_%s", GrCCCoverageProcessor::RenderPassName(fRenderPass));
-        if (RenderPass::kCubics == fRenderPass) {
+        caption.appendf("PrimitiveType_%s",
+                        GrCCCoverageProcessor::PrimitiveTypeName(fPrimitiveType));
+        if (PrimitiveType::kCubics == fPrimitiveType) {
             caption.appendf(" (%s)", SkCubicTypeName(fCubicType));
+        } else if (PrimitiveType::kConics == fPrimitiveType) {
+            caption.appendf(" (w=%f)", fConicWeight);
         }
     } else {
         caption = "Use GPU backend to visualize geometry.";
@@ -218,7 +230,7 @@ void CCPRGeometryView::onDrawContent(SkCanvas* canvas) {
     pointsPaint.setStrokeWidth(8);
     pointsPaint.setAntiAlias(true);
 
-    if (RenderPass::kCubics == fRenderPass) {
+    if (PrimitiveType::kCubics == fPrimitiveType) {
         int w = this->width(), h = this->height();
         canvas->drawPoints(SkCanvas::kPoints_PointMode, 4, fPoints, pointsPaint);
         draw_klm_line(w, h, canvas, &fCubicKLM[0], SK_ColorYELLOW);
@@ -240,12 +252,12 @@ void CCPRGeometryView::updateGpuData() {
     fTriPointInstances.reset();
     fQuadPointInstances.reset();
 
-    if (RenderPass::kCubics == fRenderPass) {
+    if (PrimitiveType::kCubics == fPrimitiveType) {
         double t[2], s[2];
         fCubicType = GrPathUtils::getCubicKLM(fPoints, &fCubicKLM, t, s);
         GrCCGeometry geometry;
         geometry.beginContour(fPoints[0]);
-        geometry.cubicTo(fPoints[1], fPoints[2], fPoints[3], kDebugBloat / 2, kDebugBloat / 2);
+        geometry.cubicTo(fPoints, kDebugBloat / 2, kDebugBloat / 2);
         geometry.endContour();
         int ptsIdx = 0;
         for (GrCCGeometry::Verb verb : geometry.verbs()) {
@@ -264,12 +276,18 @@ void CCPRGeometryView::updateGpuData() {
                     continue;
             }
         }
-    } else if (RenderPass::kQuadratics == fRenderPass) {
+    } else if (PrimitiveType::kTriangles != fPrimitiveType) {
+        SkPoint P3[3] = {fPoints[0], fPoints[1], fPoints[3]};
         GrCCGeometry geometry;
-        geometry.beginContour(fPoints[0]);
-        geometry.quadraticTo(fPoints[1], fPoints[3]);
+        geometry.beginContour(P3[0]);
+        if (PrimitiveType::kQuadratics == fPrimitiveType) {
+            geometry.quadraticTo(P3);
+        } else {
+            SkASSERT(PrimitiveType::kConics == fPrimitiveType);
+            geometry.conicTo(P3, fConicWeight);
+        }
         geometry.endContour();
-        int ptsIdx = 0;
+        int ptsIdx = 0, conicWeightIdx = 0;
         for (GrCCGeometry::Verb verb : geometry.verbs()) {
             if (GrCCGeometry::Verb::kBeginContour == verb ||
                 GrCCGeometry::Verb::kEndOpenContour == verb ||
@@ -280,8 +298,16 @@ void CCPRGeometryView::updateGpuData() {
                 ++ptsIdx;
                 continue;
             }
-            SkASSERT(GrCCGeometry::Verb::kMonotonicQuadraticTo == verb);
-            fTriPointInstances.push_back().set(&geometry.points()[ptsIdx], Sk2f(0, 0));
+            SkASSERT(GrCCGeometry::Verb::kMonotonicQuadraticTo == verb ||
+                     GrCCGeometry::Verb::kMonotonicConicTo == verb);
+            if (PrimitiveType::kQuadratics == fPrimitiveType &&
+                GrCCGeometry::Verb::kMonotonicQuadraticTo == verb) {
+                fTriPointInstances.push_back().set(&geometry.points()[ptsIdx], Sk2f(0, 0));
+            } else if (PrimitiveType::kConics == fPrimitiveType &&
+                       GrCCGeometry::Verb::kMonotonicConicTo == verb) {
+                fQuadPointInstances.push_back().setW(&geometry.points()[ptsIdx], Sk2f(0, 0),
+                                                     geometry.getConicWeight(conicWeightIdx++));
+            }
             ptsIdx += 2;
         }
     } else {
@@ -290,27 +316,18 @@ void CCPRGeometryView::updateGpuData() {
 }
 
 void CCPRGeometryView::DrawCoverageCountOp::onExecute(GrOpFlushState* state) {
-    this->drawRenderPass(state, fView->fRenderPass);
-
-    RenderPass cornerPass = RenderPass((int)fView->fRenderPass + 1);
-    if (GrCCCoverageProcessor::DoesRenderPass(cornerPass, state->caps())) {
-        this->drawRenderPass(state, cornerPass);
-    }
-}
-
-void CCPRGeometryView::DrawCoverageCountOp::drawRenderPass(GrOpFlushState* state,
-                                                           RenderPass renderPass) {
     GrResourceProvider* rp = state->resourceProvider();
     GrContext* context = state->gpu()->getContext();
     GrGLGpu* glGpu = kOpenGL_GrBackend == context->contextPriv().getBackend()
                              ? static_cast<GrGLGpu*>(state->gpu())
                              : nullptr;
 
-    GrCCCoverageProcessor proc(rp, renderPass, GrCCCoverageProcessor::WindMethod::kCrossProduct);
+    GrCCCoverageProcessor proc(rp, fView->fPrimitiveType);
     SkDEBUGCODE(proc.enableDebugBloat(kDebugBloat));
 
     SkSTArray<1, GrMesh> mesh;
-    if (GrCCCoverageProcessor::RenderPassIsCubic(renderPass)) {
+    if (PrimitiveType::kCubics == fView->fPrimitiveType ||
+        PrimitiveType::kConics == fView->fPrimitiveType) {
         sk_sp<GrBuffer> instBuff(rp->createBuffer(
                 fView->fQuadPointInstances.count() * sizeof(QuadPointInstance),
                 kVertex_GrBufferType, kDynamic_GrAccessPattern,
@@ -341,8 +358,7 @@ void CCPRGeometryView::DrawCoverageCountOp::drawRenderPass(GrOpFlushState* state
 
     if (!mesh.empty()) {
         SkASSERT(1 == mesh.count());
-        GrGpuRTCommandBuffer* cmdBuff = state->rtCommandBuffer();
-        cmdBuff->draw(pipeline, proc, mesh.begin(), nullptr, 1, this->bounds());
+        proc.draw(state, pipeline, nullptr, mesh.begin(), 1, this->bounds());
     }
 
     if (glGpu) {
@@ -375,7 +391,7 @@ private:
 
 SkView::Click* CCPRGeometryView::onFindClickHandler(SkScalar x, SkScalar y, unsigned) {
     for (int i = 0; i < 4; ++i) {
-        if (RenderPass::kCubics != fRenderPass && 2 == i) {
+        if (PrimitiveType::kCubics != fPrimitiveType && 2 == i) {
             continue;
         }
         if (fabs(x - fPoints[i].x()) < 20 && fabsf(y - fPoints[i].y()) < 20) {
@@ -399,10 +415,35 @@ bool CCPRGeometryView::onQuery(SkEvent* evt) {
     }
     SkUnichar unichar;
     if (SampleCode::CharQ(*evt, &unichar)) {
-        if (unichar >= '1' && unichar <= '3') {
-            fRenderPass = RenderPass((unichar - '1') * 2);
+        if (unichar >= '1' && unichar <= '4') {
+            fPrimitiveType = PrimitiveType(unichar - '1');
+            if (fPrimitiveType >= PrimitiveType::kWeightedTriangles) {
+                fPrimitiveType = (PrimitiveType) ((int)fPrimitiveType + 1);
+            }
             this->updateAndInval();
             return true;
+        }
+        if (PrimitiveType::kConics == fPrimitiveType) {
+            if (unichar == '+') {
+                fConicWeight *= 2;
+                this->updateAndInval();
+                return true;
+            }
+            if (unichar == '+' || unichar == '=') {
+                fConicWeight *= 5/4.f;
+                this->updateAndInval();
+                return true;
+            }
+            if (unichar == '-') {
+                fConicWeight *= 4/5.f;
+                this->updateAndInval();
+                return true;
+            }
+            if (unichar == '_') {
+                fConicWeight *= .5f;
+                this->updateAndInval();
+                return true;
+            }
         }
         if (unichar == 'D') {
             SkDebugf("    SkPoint fPoints[4] = {\n");

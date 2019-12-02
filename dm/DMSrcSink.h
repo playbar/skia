@@ -8,7 +8,6 @@
 #ifndef DMSrcSink_DEFINED
 #define DMSrcSink_DEFINED
 
-#include "DMGpuSupport.h"
 #include "SkBBHFactory.h"
 #include "SkBBoxHierarchy.h"
 #include "SkBitmap.h"
@@ -251,19 +250,8 @@ private:
     Path fPath;
 };
 
-// DeferredDisplayList flavor
-class DDLSKPSrc : public Src {
-public:
-    explicit DDLSKPSrc(Path path);
 
-    Error draw(SkCanvas*) const override;
-    SkISize size() const override;
-    Name name() const override;
-private:
-    Path fPath;
-};
-
-#if !defined(SK_BUILD_FOR_GOOGLE3)
+#if defined(SK_ENABLE_SKOTTIE)
 class SkottieSrc final : public Src {
 public:
     explicit SkottieSrc(Path path);
@@ -398,6 +386,26 @@ private:
     typedef GPUSink INHERITED;
 };
 
+class GPUPersistentCacheTestingSink : public GPUSink {
+public:
+    GPUPersistentCacheTestingSink(sk_gpu_test::GrContextFactory::ContextType,
+                                  sk_gpu_test::GrContextFactory::ContextOverrides,
+                                  SkCommandLineConfigGpu::SurfType surfType, int samples,
+                                  bool diText, SkColorType colorType, SkAlphaType alphaType,
+                                  sk_sp<SkColorSpace> colorSpace, bool threaded,
+                                  const GrContextOptions& grCtxOptions);
+
+    Error draw(const Src&, SkBitmap*, SkWStream*, SkString*) const override;
+
+    const char* fileExtension() const override {
+        // Suppress writing out results from this config - we just want to do our matching test
+        return nullptr;
+    }
+
+private:
+    typedef GPUSink INHERITED;
+};
+
 class PDFSink : public Sink {
 public:
     PDFSink(bool pdfa, SkScalar rasterDpi) : fPDFA(pdfa), fRasterDpi(rasterDpi) {}
@@ -444,9 +452,6 @@ class ThreadedSink : public RasterSink {
 public:
     explicit ThreadedSink(SkColorType, sk_sp<SkColorSpace> = nullptr);
     Error draw(const Src&, SkBitmap*, SkWStream*, SkString*) const override;
-
-private:
-    std::unique_ptr<SkExecutor> fExecutor;
 };
 
 class SKPSink : public Sink {
@@ -535,6 +540,14 @@ public:
 private:
     const int                   fW, fH;
     std::unique_ptr<SkBBHFactory> fFactory;
+};
+
+class ViaDDL : public Via {
+public:
+    ViaDDL(int numDivisions, Sink* sink);
+    Error draw(const Src&, SkBitmap*, SkWStream*, SkString*) const override;
+private:
+    const int fNumDivisions;
 };
 
 class ViaSVG : public Via {

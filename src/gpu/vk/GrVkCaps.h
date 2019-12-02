@@ -96,11 +96,9 @@ public:
         return fNewCBOnPipelineChange;
     }
 
-    // On certain Intel devices/drivers (IntelHD405) there is a bug if we try to flush non-coherent
-    // memory and pass in VK_WHOLE_SIZE. This returns whether or not it is safe to use VK_WHOLE_SIZE
-    // or not.
-    bool canUseWholeSizeOnFlushMappedMemory() const {
-        return fCanUseWholeSizeOnFlushMappedMemory;
+    // Returns true if we should always make dedicated allocations for VkImages.
+    bool shouldAlwaysUseDedicatedImageMemory() const {
+        return fShouldAlwaysUseDedicatedImageMemory;
     }
 
     /**
@@ -109,6 +107,27 @@ public:
     const StencilFormat& preferedStencilFormat() const {
         return fPreferedStencilFormat;
     }
+
+    /**
+     * Helpers used by canCopySurface. In all cases if the SampleCnt parameter is zero that means
+     * the surface is not a render target, otherwise it is the number of samples in the render
+     * target.
+     */
+    bool canCopyImage(GrPixelConfig dstConfig, int dstSampleCnt, GrSurfaceOrigin dstOrigin,
+                      GrPixelConfig srcConfig, int srcSamplecnt, GrSurfaceOrigin srcOrigin) const;
+
+    bool canCopyAsBlit(GrPixelConfig dstConfig, int dstSampleCnt, bool dstIsLinear,
+                       GrPixelConfig srcConfig, int srcSampleCnt, bool srcIsLinear) const;
+
+    bool canCopyAsResolve(GrPixelConfig dstConfig, int dstSampleCnt, GrSurfaceOrigin dstOrigin,
+                          GrPixelConfig srcConfig, int srcSamplecnt,
+                          GrSurfaceOrigin srcOrigin) const;
+
+    bool canCopyAsDraw(GrPixelConfig dstConfig, bool dstIsRenderable,
+                       GrPixelConfig srcConfig, bool srcIsTextureable) const;
+
+    bool canCopySurface(const GrSurfaceProxy* dst, const GrSurfaceProxy* src,
+                        const SkIRect& srcRect, const SkIPoint& dstPoint) const override;
 
     bool initDescForDstCopy(const GrRenderTargetProxy* src, GrSurfaceDesc* desc, GrSurfaceOrigin*,
                             bool* rectsMustMatch, bool* disallowSubrect) const override;
@@ -137,6 +156,10 @@ private:
                     const VkPhysicalDeviceMemoryProperties&,
                     uint32_t featureFlags);
     void initShaderCaps(const VkPhysicalDeviceProperties&, uint32_t featureFlags);
+
+#ifdef GR_TEST_UTILS
+    GrBackendFormat onCreateFormatFromBackendTexture(const GrBackendTexture&) const override;
+#endif
 
     void initConfigTable(const GrVkInterface*, VkPhysicalDevice, const VkPhysicalDeviceProperties&);
     void initStencilFormat(const GrVkInterface* iface, VkPhysicalDevice physDev);
@@ -169,16 +192,11 @@ private:
     StencilFormat fPreferedStencilFormat;
 
     bool fCanUseGLSLForShaderModule;
-
     bool fMustDoCopiesFromOrigin;
-
     bool fMustSubmitCommandsBeforeCopyOp;
-
     bool fMustSleepOnTearDown;
-
     bool fNewCBOnPipelineChange;
-
-    bool fCanUseWholeSizeOnFlushMappedMemory;
+    bool fShouldAlwaysUseDedicatedImageMemory;
 
     typedef GrCaps INHERITED;
 };

@@ -15,6 +15,8 @@
 #include "GrOpList.h"
 #include "GrProxyProvider.h"
 #include "GrSWMaskHelper.h"
+#include "GrShape.h"
+#include "GrSurfaceContextPriv.h"
 #include "SkMakeUnique.h"
 #include "SkSemaphore.h"
 #include "SkTaskGroup.h"
@@ -94,9 +96,10 @@ void GrSoftwarePathRenderer::DrawNonAARect(GrRenderTargetContext* renderTargetCo
                                            const SkMatrix& viewMatrix,
                                            const SkRect& rect,
                                            const SkMatrix& localMatrix) {
+    GrContext* context = renderTargetContext->surfPriv().getContext();
     renderTargetContext->addDrawOp(clip,
                                    GrRectOpFactory::MakeNonAAFillWithLocalMatrix(
-                                           std::move(paint), viewMatrix, localMatrix, rect,
+                                           context, std::move(paint), viewMatrix, localMatrix, rect,
                                            GrAAType::kNone, &userStencilSettings));
 }
 
@@ -213,7 +216,9 @@ private:
 // When the SkPathRef genID changes, invalidate a corresponding GrResource described by key.
 class PathInvalidator : public SkPathRef::GenIDChangeListener {
 public:
-    explicit PathInvalidator(const GrUniqueKey& key) : fMsg(key) {}
+    PathInvalidator(const GrUniqueKey& key, uint32_t contextUniqueID)
+            : fMsg(key, contextUniqueID) {}
+
 private:
     GrUniqueKeyInvalidatedMessage fMsg;
 
@@ -290,14 +295,16 @@ bool GrSoftwarePathRenderer::onDrawPath(const DrawPathArgs& args) {
         // Fractional translate does not affect caching on Android. This is done for better cache
         // hit ratio and speed, but it is matching HWUI behavior, which doesn't consider the matrix
         // at all when caching paths.
-        GrUniqueKey::Builder builder(&maskKey, kDomain, 4 + args.fShape->unstyledKeySize());
+        GrUniqueKey::Builder builder(&maskKey, kDomain, 4 + args.fShape->unstyledKeySize(),
+                                     "SW Path Mask");
 #else
         SkScalar tx = args.fViewMatrix->get(SkMatrix::kMTransX);
         SkScalar ty = args.fViewMatrix->get(SkMatrix::kMTransY);
         // Allow 8 bits each in x and y of subpixel positioning.
         SkFixed fracX = SkScalarToFixed(SkScalarFraction(tx)) & 0x0000FF00;
         SkFixed fracY = SkScalarToFixed(SkScalarFraction(ty)) & 0x0000FF00;
-        GrUniqueKey::Builder builder(&maskKey, kDomain, 5 + args.fShape->unstyledKeySize());
+        GrUniqueKey::Builder builder(&maskKey, kDomain, 5 + args.fShape->unstyledKeySize(),
+                                     "SW Path Mask");
 #endif
         builder[0] = SkFloat2Bits(sx);
         builder[1] = SkFloat2Bits(sy);
@@ -361,7 +368,8 @@ bool GrSoftwarePathRenderer::onDrawPath(const DrawPathArgs& args) {
         if (useCache) {
             SkASSERT(proxy->origin() == kTopLeft_GrSurfaceOrigin);
             fProxyProvider->assignUniqueKeyToProxy(maskKey, proxy.get());
-            args.fShape->addGenIDChangeListener(new PathInvalidator(maskKey));
+            args.fShape->addGenIDChangeListener(
+                    sk_make_sp<PathInvalidator>(maskKey, args.fContext->uniqueID()));
         }
     }
     if (inverseFilled) {

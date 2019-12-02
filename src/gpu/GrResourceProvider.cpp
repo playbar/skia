@@ -62,8 +62,7 @@ GrResourceProvider::GrResourceProvider(GrGpu* gpu, GrResourceCache* cache, GrSin
 }
 
 sk_sp<GrTexture> GrResourceProvider::createTexture(const GrSurfaceDesc& desc, SkBudgeted budgeted,
-                                                   const GrMipLevel texels[], int mipLevelCount,
-                                                   SkDestinationSurfaceColorMode mipColorMode) {
+                                                   const GrMipLevel texels[], int mipLevelCount) {
     ASSERT_SINGLE_OWNER
 
     SkASSERT(mipLevelCount > 0);
@@ -77,12 +76,7 @@ sk_sp<GrTexture> GrResourceProvider::createTexture(const GrSurfaceDesc& desc, Sk
         return nullptr;
     }
 
-    sk_sp<GrTexture> tex(fGpu->createTexture(desc, budgeted, texels, mipLevelCount));
-    if (tex) {
-        tex->texturePriv().setMipColorMode(mipColorMode);
-    }
-
-    return tex;
+    return fGpu->createTexture(desc, budgeted, texels, mipLevelCount);
 }
 
 sk_sp<GrTexture> GrResourceProvider::getExactScratch(const GrSurfaceDesc& desc,
@@ -93,16 +87,6 @@ sk_sp<GrTexture> GrResourceProvider::getExactScratch(const GrSurfaceDesc& desc,
     }
 
     return tex;
-}
-
-static bool make_info(int w, int h, GrPixelConfig config, SkImageInfo* ii) {
-    SkColorType colorType;
-    if (!GrPixelConfigToColorType(config, &colorType)) {
-        return false;
-    }
-
-    *ii = SkImageInfo::Make(w, h, colorType, kUnknown_SkAlphaType, nullptr);
-    return true;
 }
 
 sk_sp<GrTexture> GrResourceProvider::createTexture(const GrSurfaceDesc& desc,
@@ -126,34 +110,27 @@ sk_sp<GrTexture> GrResourceProvider::createTexture(const GrSurfaceDesc& desc,
     GrContext* context = fGpu->getContext();
     GrProxyProvider* proxyProvider = context->contextPriv().proxyProvider();
 
-    SkImageInfo srcInfo;
-
-    if (make_info(desc.fWidth, desc.fHeight, desc.fConfig, &srcInfo)) {
+    SkColorType colorType;
+    if (GrPixelConfigToColorType(desc.fConfig, &colorType)) {
         // DDL TODO: remove this use of createInstantiatedProxy and convert it to a testing-only
         // method.
         sk_sp<GrTextureProxy> proxy = proxyProvider->createInstantiatedProxy(
                 desc, kTopLeft_GrSurfaceOrigin, fit, budgeted);
-        if (proxy) {
-            // We use an ephemeral surface context to do the write pixels. Here it isn't clear what
-            // color space to tag it with. That's ok because GrSurfaceContext::writePixels doesn't
-            // do any color space conversions. Though, that is likely to change. However, if the
-            // pixel config is sRGB then the passed color space here must have sRGB gamma or
-            // GrSurfaceContext creation fails.
-            sk_sp<SkColorSpace> colorSpace;
-            if (GrPixelConfigIsSRGB(desc.fConfig)) {
-                colorSpace = SkColorSpace::MakeSRGB();
-            }
-            sk_sp<GrSurfaceContext> sContext = context->contextPriv().makeWrappedSurfaceContext(
-                    std::move(proxy), std::move(colorSpace));
-            if (sContext) {
-                if (sContext->writePixels(srcInfo, mipLevel.fPixels, mipLevel.fRowBytes, 0, 0)) {
-                    return sk_ref_sp(sContext->asTextureProxy()->priv().peekTexture());
-                }
-            }
+        if (!proxy) {
+            return nullptr;
         }
+        auto srcInfo = SkImageInfo::Make(desc.fWidth, desc.fHeight, colorType,
+                                         kUnknown_SkAlphaType);
+        sk_sp<GrSurfaceContext> sContext = context->contextPriv().makeWrappedSurfaceContext(
+                std::move(proxy));
+        if (!sContext) {
+            return nullptr;
+        }
+        SkAssertResult(sContext->writePixels(srcInfo, mipLevel.fPixels, mipLevel.fRowBytes, 0, 0));
+        return sk_ref_sp(sContext->asTextureProxy()->priv().peekTexture());
+    } else {
+        return fGpu->createTexture(desc, budgeted, &mipLevel, 1);
     }
-
-    return fGpu->createTexture(desc, budgeted, &mipLevel, 1);
 }
 
 sk_sp<GrTexture> GrResourceProvider::createTexture(const GrSurfaceDesc& desc, SkBudgeted budgeted,
@@ -288,7 +265,7 @@ sk_sp<const GrBuffer> GrResourceProvider::findOrMakeStaticBuffer(GrBufferType in
                                                                  const void* data,
                                                                  const GrUniqueKey& key) {
     if (auto buffer = this->findByUniqueKey<GrBuffer>(key)) {
-        return buffer;
+        return std::move(buffer);
     }
     if (auto buffer = this->createBuffer(size, intendedType, kStatic_GrAccessPattern, 0,
                                          data)) {

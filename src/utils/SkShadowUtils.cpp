@@ -12,6 +12,7 @@
 #include "SkColorData.h"
 #include "SkDevice.h"
 #include "SkDrawShadowInfo.h"
+#include "SkFlattenablePriv.h"
 #include "SkMaskFilter.h"
 #include "SkPath.h"
 #include "SkPM4f.h"
@@ -22,6 +23,7 @@
 #include "SkString.h"
 #include "SkTLazy.h"
 #include "SkVertices.h"
+#include <new>
 #if SK_SUPPORT_GPU
 #include "GrShape.h"
 #include "effects/GrBlurredEdgeFragmentProcessor.h"
@@ -44,7 +46,6 @@ public:
             GrContext*, const GrColorSpaceInfo&) const override;
 #endif
 
-    SK_TO_STRING_OVERRIDE()
     SK_DECLARE_PUBLIC_FLATTENABLE_DESERIALIZATION_PROCS(SkGaussianColorFilter)
 
 protected:
@@ -62,12 +63,6 @@ private:
 sk_sp<SkFlattenable> SkGaussianColorFilter::CreateProc(SkReadBuffer&) {
     return Make();
 }
-
-#ifndef SK_IGNORE_TO_STRING
-void SkGaussianColorFilter::toString(SkString* str) const {
-    str->append("SkGaussianColorFilter ");
-}
-#endif
 
 #if SK_SUPPORT_GPU
 
@@ -547,9 +542,11 @@ static bool validate_rec(const SkDrawShadowRec& rec) {
 void SkBaseDevice::drawShadow(const SkPath& path, const SkDrawShadowRec& rec) {
     auto drawVertsProc = [this](const SkVertices* vertices, SkBlendMode mode, const SkPaint& paint,
                                 SkScalar tx, SkScalar ty) {
-        SkAutoDeviceCTMRestore adr(this, SkMatrix::Concat(this->ctm(),
-                                                          SkMatrix::MakeTrans(tx, ty)));
-        this->drawVertices(vertices, mode, paint);
+        if (vertices->vertexCount()) {
+            SkAutoDeviceCTMRestore adr(this, SkMatrix::Concat(this->ctm(),
+                                                              SkMatrix::MakeTrans(tx, ty)));
+            this->drawVertices(vertices, nullptr, 0, mode, paint);
+        }
     };
 
     if (!validate_rec(rec)) {
@@ -583,7 +580,7 @@ void SkBaseDevice::drawShadow(const SkPath& path, const SkDrawShadowRec& rec) {
                     SkColorFilter::MakeModeFilter(rec.fAmbientColor,
                                                   SkBlendMode::kModulate)->makeComposed(
                                                                    SkGaussianColorFilter::Make()));
-                this->drawVertices(vertices.get(), SkBlendMode::kModulate, paint);
+                this->drawVertices(vertices.get(), nullptr, 0, SkBlendMode::kModulate, paint);
                 success = true;
             }
         }
@@ -664,7 +661,7 @@ void SkBaseDevice::drawShadow(const SkPath& path, const SkDrawShadowRec& rec) {
                     SkColorFilter::MakeModeFilter(rec.fSpotColor,
                                                   SkBlendMode::kModulate)->makeComposed(
                                                       SkGaussianColorFilter::Make()));
-                this->drawVertices(vertices.get(), SkBlendMode::kModulate, paint);
+                this->drawVertices(vertices.get(), nullptr, 0, SkBlendMode::kModulate, paint);
                 success = true;
             }
         }
@@ -693,8 +690,10 @@ void SkBaseDevice::drawShadow(const SkPath& path, const SkDrawShadowRec& rec) {
             } else if (factory.fOffset.length()*scale + scale < radius) {
                 // if we don't translate more than the blur distance, can assume umbra is covered
                 factory.fOccluderType = SpotVerticesFactory::OccluderType::kOpaqueNoUmbra;
-            } else {
+            } else if (path.isConvex()) {
                 factory.fOccluderType = SpotVerticesFactory::OccluderType::kOpaquePartialUmbra;
+            } else {
+                factory.fOccluderType = SpotVerticesFactory::OccluderType::kTransparent;
             }
             // need to add this after we classify the shadow
             factory.fOffset.fX += viewMatrix.getTranslateX();
