@@ -55,7 +55,8 @@ static sk_sp<SkSurface> create_opengl_surface(int w, int h) {
                                             SkBudgeted::kNo,
                                             SkImageInfo::MakeN32Premul(w,h));
 }
-int main(int, char**) {
+int main(int, char**)
+{
     bool gl_ok = setup_gl_context();
     srand(time(nullptr));
     sk_sp<SkSurface> surface = (gl_ok && rand() % 2) ? create_opengl_surface(320, 240)
