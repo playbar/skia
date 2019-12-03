@@ -12,6 +12,9 @@ import stat
 import sys
 import urllib2
 
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 os.chdir(os.path.join(os.path.dirname(__file__), os.pardir))
 
 dst = 'bin/gn.exe' if 'win32' in sys.platform else 'bin/gn'

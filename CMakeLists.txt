@@ -2626,68 +2626,7 @@ add_dependencies("${target}"
   "compile_processors")
 
 
-#//:gpu_tool_utils
-set("target" "gpu_tool_utils")
-list(APPEND "${target}__cxx_srcs"
-  "./tools/gpu/GrContextFactory.cpp"
-  "./tools/gpu/GrTest.cpp"
-  "./tools/gpu/MemoryCache.cpp"
-  "./tools/gpu/ProxyUtils.cpp"
-  "./tools/gpu/TestContext.cpp"
-  "./tools/gpu/atlastext/GLTestAtlasTextRenderer.cpp"
-  "./tools/gpu/gl/GLTestContext.cpp"
-  "./tools/gpu/gl/command_buffer/GLTestContext_command_buffer.cpp"
-  "./tools/gpu/gl/null/NullGLTestContext.cpp"
-  "./tools/gpu/mock/MockTestContext.cpp"
-  "./tools/gpu/gl/mac/CreatePlatformGLTestContext_mac.cpp")
-set("${target}__other_srcs" "./tools/gpu/MemoryCache.h")
-add_library("${target}" OBJECT ${${target}__cxx_srcs} ${${target}__other_srcs})
-set_source_files_properties(${${target}__other_srcs} PROPERTIES HEADER_FILE_ONLY "True")
-set_property(TARGET "${target}" APPEND PROPERTY INCLUDE_DIRECTORIES
-  "./tools/gpu/"
-  "./include/private/"
-  "./src/c/"
-  "./src/codec/"
-  "./src/core/"
-  "./src/effects/"
-  "./src/fonts/"
-  "./src/image/"
-  "./src/images/"
-  "./src/lazy/"
-  "./src/opts/"
-  "./src/pathops/"
-  "./src/pdf/"
-  "./src/ports/"
-  "./src/sfnt/"
-  "./src/shaders/"
-  "./src/shaders/gradients/"
-  "./src/sksl/"
-  "./src/utils/"
-  "./src/utils/win/"
-  "./src/xml/"
-  "./third_party/gif/"
-  "./src/gpu/"
-  "./include/android/"
-  "./include/c/"
-  "./include/codec/"
-  "./include/config/"
-  "./include/core/"
-  "./include/effects/"
-  "./include/encode/"
-  "./include/gpu/"
-  "./include/atlastext/"
-  "./include/pathops/"
-  "./include/ports/"
-  "./include/svg/"
-  "./include/utils/"
-  "./include/utils/mac/"
-  "./include/atlastext/")
-set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SK_ENABLE_SPIRV_VALIDATION;SK_HAS_HEIF_LIBRARY;SK_HAS_JPEG_LIBRARY;SK_SUPPORT_PDF;SK_PDF_USE_SFNTLY;SK_HAS_PNG_LIBRARY;SK_CODEC_DECODES_RAW;SK_HAS_WEBP_LIBRARY;SK_XML;SK_SUPPORT_ATLAS_TEXT=1;")
-set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
-set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
-add_dependencies("${target}"
-  "skia")
-
+include(cmake_gpu_tool_utils.cmake)
 
 #//:heif
 set("target" "heif")
