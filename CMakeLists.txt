@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 cmake_policy(VERSION 2.8.8)
 
+add_definitions(-DSDL_VIDEO_DRIVER_COCOA=1)
+
 file(WRITE "/mywork/github/skia/cmake/empty.cpp")
 execute_process(COMMAND
   ninja -C "/mywork/github/skia/cmake/" build.ninja

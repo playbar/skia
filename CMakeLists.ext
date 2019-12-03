@@ -2555,6 +2555,9 @@ list(APPEND "${target}__c_srcs"
   "/mywork/github/skia/third_party/externals/sdl/src/audio/SDL_audiotypecvt.c"
   "/mywork/github/skia/third_party/externals/sdl/src/audio/SDL_mixer.c"
   "/mywork/github/skia/third_party/externals/sdl/src/audio/SDL_wave.c"
+#  "/mywork/github/skia/third_party/externals/sdl/src/audio/coreaudio/SDL_coreaudio.m"
+  "/mywork/github/skia/third_party/externals/sdl/src/audio/disk/SDL_diskaudio.c"
+  "/mywork/github/skia/third_party/externals/sdl/src/audio/dummy/SDL_dummyaudio.c"
   "/mywork/github/skia/third_party/externals/sdl/src/cpuinfo/SDL_cpuinfo.c"
   "/mywork/github/skia/third_party/externals/sdl/src/dynapi/SDL_dynapi.c"
   "/mywork/github/skia/third_party/externals/sdl/src/events/SDL_clipboardevents.c"
@@ -2573,6 +2576,8 @@ list(APPEND "${target}__c_srcs"
   "/mywork/github/skia/third_party/externals/sdl/src/joystick/SDL_joystick.c"
   "/mywork/github/skia/third_party/externals/sdl/src/joystick/dummy/SDL_sysjoystick.c"
   "/mywork/github/skia/third_party/externals/sdl/src/power/SDL_power.c"
+  "/mywork/github/skia/third_party/externals/sdl/src/power/macosx/SDL_syspower.c"
+  "/mywork/github/skia/third_party/externals/sdl/src/render/SDL_render.c"
   "/mywork/github/skia/third_party/externals/sdl/src/render/SDL_render.c"
   "/mywork/github/skia/third_party/externals/sdl/src/render/SDL_yuv_sw.c"
   "/mywork/github/skia/third_party/externals/sdl/src/render/software/SDL_blendfillrect.c"
@@ -2609,6 +2614,9 @@ list(APPEND "${target}__c_srcs"
   "/mywork/github/skia/third_party/externals/sdl/src/video/SDL_stretch.c"
   "/mywork/github/skia/third_party/externals/sdl/src/video/SDL_surface.c"
   "/mywork/github/skia/third_party/externals/sdl/src/video/SDL_video.c"
+  "/mywork/github/skia/third_party/externals/sdl/src/video/dummy/SDL_nullevents.c"
+  "/mywork/github/skia/third_party/externals/sdl/src/video/dummy/SDL_nullframebuffer.c"
+  "/mywork/github/skia/third_party/externals/sdl/src/video/dummy/SDL_nullvideo.c"
   "/mywork/github/skia/third_party/externals/sdl/src/loadso/dlopen/SDL_sysloadso.c"
   "/mywork/github/skia/third_party/externals/sdl/src/thread/pthread/SDL_syscond.c"
   "/mywork/github/skia/third_party/externals/sdl/src/thread/pthread/SDL_sysmutex.c"
@@ -2617,8 +2625,8 @@ list(APPEND "${target}__c_srcs"
   "/mywork/github/skia/third_party/externals/sdl/src/thread/pthread/SDL_systls.c"
   "/mywork/github/skia/third_party/externals/sdl/src/timer/unix/SDL_systimer.c"
   "/mywork/github/skia/third_party/externals/sdl/src/render/opengl/SDL_render_gl.c"
-  "/mywork/github/skia/third_party/externals/sdl/src/render/opengl/SDL_shaders_gl.c")
-list(APPEND "${target}__other_srcs"
+  "/mywork/github/skia/third_party/externals/sdl/src/render/opengl/SDL_shaders_gl.c"
+#list(APPEND "${target}__other_srcs"
   "/mywork/github/skia/third_party/externals/sdl/src/file/cocoa/SDL_rwopsbundlesupport.m"
   "/mywork/github/skia/third_party/externals/sdl/src/filesystem/cocoa/SDL_sysfilesystem.m"
   "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoaclipboard.m"
@@ -2636,7 +2644,7 @@ add_library("${target}" OBJECT ${${target}__c_srcs} ${${target}__other_srcs})
 set_source_files_properties(${${target}__other_srcs} PROPERTIES HEADER_FILE_ONLY "True")
 set_property(TARGET "${target}" APPEND PROPERTY INCLUDE_DIRECTORIES
   "/mywork/github/skia/third_party/libsdl/")
-set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "HAVE_ACOS;HAVE_ASIN;HAVE_ATAN;HAVE_ATAN2;HAVE_CEIL;HAVE_COPYSIGN;HAVE_COS;HAVE_COSF;HAVE_FABS;HAVE_FLOOR;HAVE_LOG;HAVE_POW;HAVE_SCALBN;HAVE_SIN;HAVE_SINF;HAVE_SQRT;HAVE_SQRTF;HAVE_TAN;HAVE_TANF;SDL_HAPTIC_DISABLED=1;SDL_JOYSTICK_DISABLED=1;USING_PREMAKE_CONFIG_H;SDL_LOADSO_DLOPEN=1;SDL_THREAD_PTHREAD=1;SDL_THREAD_PTHREAD_RECURSIVE_MUTEX=1;SDL_TIMER_UNIX=1;SDL_FILESYSTEM_COCOA=1;SDL_VIDEO_DRIVER_COCOA=1;SDL_VIDEO_OPENGL=1;SDL_VIDEO_RENDER_OGL=1;SDL_VIDEO_OPENGL_CGL=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "HAVE_ACOS;HAVE_ASIN;HAVE_ATAN;HAVE_ATAN2;HAVE_CEIL;HAVE_COPYSIGN;HAVE_COS;HAVE_COSF;HAVE_FABS;HAVE_FLOOR;HAVE_LOG;HAVE_POW;HAVE_SCALBN;HAVE_SIN;HAVE_SINF;HAVE_SQRT;HAVE_SQRTF;HAVE_TAN;HAVE_TANF;SDL_HAPTIC_DISABLED=1;SDL_JOYSTICK_DISABLED=1;SDL_LOADSO_DLOPEN=1;SDL_THREAD_PTHREAD=1;SDL_THREAD_PTHREAD_RECURSIVE_MUTEX=1;SDL_TIMER_UNIX=1;SDL_FILESYSTEM_COCOA=1;SDL_VIDEO_DRIVER_COCOA=1;SDL_VIDEO_OPENGL=1;SDL_VIDEO_RENDER_OGL=1;SDL_VIDEO_OPENGL_CGL=1;")
 set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/sdl/include ")
 set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
 
@@ -3510,6 +3518,7 @@ set_property(TARGET "${target}" APPEND PROPERTY INCLUDE_DIRECTORIES
   "/mywork/github/skia/include/utils/mac/"
   "/mywork/github/skia/include/atlastext/")
 set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SK_ENABLE_SPIRV_VALIDATION;SK_HAS_HEIF_LIBRARY;SK_HAS_JPEG_LIBRARY;SK_SUPPORT_PDF;SK_PDF_USE_SFNTLY;SK_HAS_PNG_LIBRARY;SK_CODEC_DECODES_RAW;SK_HAS_WEBP_LIBRARY;SK_XML;SK_SUPPORT_ATLAS_TEXT=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "HAVE_ACOS;HAVE_ASIN;HAVE_ATAN;HAVE_ATAN2;HAVE_CEIL;HAVE_COPYSIGN;HAVE_COS;HAVE_COSF;HAVE_FABS;HAVE_FLOOR;HAVE_LOG;HAVE_POW;HAVE_SCALBN;HAVE_SIN;HAVE_SINF;HAVE_SQRT;HAVE_SQRTF;HAVE_TAN;HAVE_TANF;SDL_HAPTIC_DISABLED=1;SDL_JOYSTICK_DISABLED=1;SDL_LOADSO_DLOPEN=1;SDL_THREAD_PTHREAD=1;SDL_THREAD_PTHREAD_RECURSIVE_MUTEX=1;SDL_TIMER_UNIX=1;SDL_FILESYSTEM_COCOA=1;SDL_VIDEO_DRIVER_COCOA=1;SDL_VIDEO_OPENGL=1;SDL_VIDEO_RENDER_OGL=1;SDL_VIDEO_OPENGL_CGL=1;")
 set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/sdl/include -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
 set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-rpath,@loader_path/. -Wl,-w ")
 find_library("library__dl" "dl")
