@@ -1,3 +1,13 @@
-Skia is a complete 2D graphic library for drawing Text, Geometries, and Images.
+1、下载第三方依赖库
+$ cd skia
+python tools/git-sync-deps
 
-See full details, and build instructions, at https://skia.org.
+2、安装ninja
+
+3、工作目录路径： skia根目录
+
+4、编译错误时，需要更改 third_party/externals 中的文件
+
+
+bin/gn gen out/config --ide=json --json-ide-script=../../gn/gn_to_cmake.py
+

@@ -15,7 +15,7 @@
 #include "../../third_party/externals/Nima-Cpp/Source/Animation/ActorAnimationInstance.hpp"
 #include "../../third_party/externals/Nima-Cpp/Source/Actor.hpp"
 #include "../../third_party/externals/Nima-Cpp/Source/ActorImage.hpp"
-#include "../../third_party/externals/Nima-Cpp/Source/Vec2D.hpp"
+#include "../../third_party/externals/Nima-Math-Cpp/Source/Vec2D.hpp"
 //#include <nima/Actor.hpp>
 //#include <nima/ActorImage.hpp>
 //#include <nima/Animation/ActorAnimationInstance.hpp>

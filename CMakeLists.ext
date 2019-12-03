@@ -13,6 +13,9 @@ foreach("other_dep" ${other_deps})
   configure_file("${other_dep}" "CMakeLists.devnull" COPYONLY)
 endforeach("other_dep")
 
+include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/
+)
 
 #//:gpu_tool_utils
 set("target" "gpu_tool_utils")
