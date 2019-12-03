@@ -1,0 +1,12 @@
+defines = -DJSON_USE_EXCEPTION=0
+include_dirs =
+cflags = -w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/jsoncpp/include
+cflags_cc = -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti
+root_out_dir = .
+target_output_name = jsoncpp
+
+build obj/third_party/externals/jsoncpp/src/lib_json/jsoncpp.json_reader.o: cxx ../third_party/externals/jsoncpp/src/lib_json/json_reader.cpp
+build obj/third_party/externals/jsoncpp/src/lib_json/jsoncpp.json_value.o: cxx ../third_party/externals/jsoncpp/src/lib_json/json_value.cpp
+build obj/third_party/externals/jsoncpp/src/lib_json/jsoncpp.json_writer.o: cxx ../third_party/externals/jsoncpp/src/lib_json/json_writer.cpp
+
+build obj/third_party/jsoncpp/jsoncpp.stamp: stamp obj/third_party/externals/jsoncpp/src/lib_json/jsoncpp.json_reader.o obj/third_party/externals/jsoncpp/src/lib_json/jsoncpp.json_value.o obj/third_party/externals/jsoncpp/src/lib_json/jsoncpp.json_writer.o

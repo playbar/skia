@@ -51,10 +51,8 @@ bin/clang_win
 
 vulkan-out
 gl-out
-
 node_modules
 tools/lottiecap/filmstrip.png
-obj
 cmake-build-debug
 .ninja_deps
 .ninja_log

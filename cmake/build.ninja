@@ -1,7 +1,7 @@
 ninja_required_version = 1.7.2
 
 rule gn
-  command = bin/gn --root=. -q --ide=json --json-ide-script=gn/gn_to_cmake.py gen .
+  command = ../bin/gn --root=./.. -q --ide=json --json-ide-script=../../gn/gn_to_cmake.py gen .
   description = Regenerating ninja files
 
 build build.ninja: gn

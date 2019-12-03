@@ -9,4 +9,4 @@ execute_process(COMMAND
 if (ninja_result)
   message(WARNING "Regeneration failed running ninja: ${ninja_result}")
 endif()
-include("/mywork/github/skia/CMakeLists.ext")
+include("/mywork/github/skia/cmake/CMakeLists.ext")

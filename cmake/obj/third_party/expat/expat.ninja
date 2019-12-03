@@ -1,0 +1,12 @@
+defines = -DHAVE_MEMMOVE -DXML_STATIC
+include_dirs =
+cflags = -w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/expat/lib
+cflags_c =
+root_out_dir = .
+target_output_name = expat
+
+build obj/third_party/externals/expat/lib/expat.xmlparse.o: cc ../third_party/externals/expat/lib/xmlparse.c
+build obj/third_party/externals/expat/lib/expat.xmlrole.o: cc ../third_party/externals/expat/lib/xmlrole.c
+build obj/third_party/externals/expat/lib/expat.xmltok.o: cc ../third_party/externals/expat/lib/xmltok.c
+
+build obj/third_party/expat/expat.stamp: stamp obj/third_party/externals/expat/lib/expat.xmlparse.o obj/third_party/externals/expat/lib/expat.xmlrole.o obj/third_party/externals/expat/lib/expat.xmltok.o
