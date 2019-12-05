@@ -1,0 +1,4 @@
+.gradle
+.idea
+nativeactivity/build
+nativeactivity/.externalNativeBuild

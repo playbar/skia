@@ -2,12 +2,7 @@
 // Created by hou guoli on 2019/11/26.
 //
 
-/*
- * Copyright 2015 Google Inc.
- *
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
+
 #include "../include/core/SkCanvas.h"
 #include "../include/core/SkData.h"
 #include "../include/core/SkSurface.h"
@@ -72,7 +67,7 @@ int main(int, char**)
     paint.setShader(shader);
     // Draw to the surface via its SkCanvas.
     SkCanvas* canvas = surface->getCanvas();   // We don't manage this pointer's lifetime.
-    static const char* msg = "Hello world! example";
+    static const char* msg = "Hello world!";
     canvas->clear(SK_ColorWHITE);
     canvas->drawText(msg, strlen(msg), 90,120, paint);
     // Grab a snapshot of the surface as an immutable SkImage.

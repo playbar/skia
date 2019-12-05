@@ -4,11 +4,24 @@ set("target" "sk_app")
 list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/tools/sk_app/CommandSet.cpp"
         "/mywork/github/skia/tools/sk_app/GLWindowContext.cpp"
-        "/mywork/github/skia/tools/sk_app/Window.cpp"
+        "/mywork/github/skia/tools/sk_app/Window.cpp")
+
+if(TARGET_ANDROID)
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/tools/sk_app/android/GLWindowContext_android.cpp"
+        "/mywork/github/skia/tools/sk_app/android/main_android.cpp"
+        "/mywork/github/skia/tools/sk_app/android/RasterWindowContext_android.cpp"
+        "/mywork/github/skia/tools/sk_app/android/surface_glue_android.cpp"
+        "/mywork/github/skia/tools/sk_app/android/VulkanWindowContext_android.cpp"
+        "/mywork/github/skia/tools/sk_app/android/Window_android.cpp")
+else()
+list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/tools/sk_app/mac/GLWindowContext_mac.cpp"
         "/mywork/github/skia/tools/sk_app/mac/RasterWindowContext_mac.cpp"
         "/mywork/github/skia/tools/sk_app/mac/Window_mac.cpp"
         "/mywork/github/skia/tools/sk_app/mac/main_mac.cpp")
+endif()
+
 add_library("${target}" OBJECT ${${target}__cxx_srcs})
 set_property(TARGET "${target}" APPEND PROPERTY INCLUDE_DIRECTORIES
         "/mywork/github/skia/tools/sk_app/"
