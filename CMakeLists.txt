@@ -54,6 +54,7 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/timer/
         ${CMAKE_CURRENT_SOURCE_DIR}/tools/trace/
         ${CMAKE_CURRENT_SOURCE_DIR}/include/views/
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/skshaper/include/
 )
 
 include(cmake_gpu_tool_utils.cmake)
@@ -68,10 +69,10 @@ include(cmake_gm.cmake)
 include(cmake_list_gms.cmake)
 
 
-#//:run_sksllex
-set("target" "run_sksllex")
-set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
-add_custom_target("${target}" SOURCES ${${target}__cxx_srcs})
+##//:run_sksllex
+#set("target" "run_sksllex")
+#set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+#add_custom_target("${target}" SOURCES ${${target}__cxx_srcs})
 
 include(cmake_modules__skottie.cmake)
 include(cmake_avx.cmake)
