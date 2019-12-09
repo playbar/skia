@@ -85,21 +85,42 @@ list(APPEND "${target}__c_srcs"
         "/mywork/github/skia/third_party/externals/sdl/src/thread/pthread/SDL_systls.c"
         "/mywork/github/skia/third_party/externals/sdl/src/timer/unix/SDL_systimer.c"
         "/mywork/github/skia/third_party/externals/sdl/src/render/opengl/SDL_render_gl.c"
-        "/mywork/github/skia/third_party/externals/sdl/src/render/opengl/SDL_shaders_gl.c"
-        #list(APPEND "${target}__other_srcs"
-        "/mywork/github/skia/third_party/externals/sdl/src/file/cocoa/SDL_rwopsbundlesupport.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/filesystem/cocoa/SDL_sysfilesystem.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoaclipboard.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoaevents.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoakeyboard.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoamessagebox.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoamodes.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoamouse.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoamousetap.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoaopengl.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoashape.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoavideo.m"
-        "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoawindow.m")
+        "/mywork/github/skia/third_party/externals/sdl/src/render/opengl/SDL_shaders_gl.c")
+
+
+if(TARGET_ANDROID)
+    #list(APPEND "${target}__other_srcs"
+list(APPEND "${target}__c_srcs"
+    "/mywork/github/skia/third_party/externals/sdl/src/filesystem/android/SDL_sysfilesystem.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidclipboard.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidevents.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidkeyboard.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidmessagebox.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidmodes.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidmouse.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidmousetap.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidopengl.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidshape.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidvideo.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidwindow.c")
+else()
+#list(APPEND "${target}__other_srcs"
+list(APPEND "${target}__c_srcs"
+    "/mywork/github/skia/third_party/externals/sdl/src/file/cocoa/SDL_rwopsbundlesupport.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/filesystem/cocoa/SDL_sysfilesystem.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoaclipboard.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoaevents.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoakeyboard.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoamessagebox.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoamodes.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoamouse.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoamousetap.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoaopengl.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoashape.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoavideo.m"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/cocoa/SDL_cocoawindow.m")
+endif()
+
 add_library("${target}" OBJECT ${${target}__c_srcs} ${${target}__other_srcs})
 set_source_files_properties(${${target}__other_srcs} PROPERTIES HEADER_FILE_ONLY "True")
 set_property(TARGET "${target}" APPEND PROPERTY INCLUDE_DIRECTORIES

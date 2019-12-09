@@ -1,4 +1,4 @@
 .gradle
 .idea
-androidtest/build
-androidtest/.externalNativeBuild
+skiatest/build
+skiatest/.externalNativeBuild

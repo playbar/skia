@@ -1,2 +1,2 @@
-include ':nativeactivity'
+include ':skiatest'
 
