@@ -11,8 +11,19 @@ list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/tools/gpu/gl/GLTestContext.cpp"
         "/mywork/github/skia/tools/gpu/gl/command_buffer/GLTestContext_command_buffer.cpp"
         "/mywork/github/skia/tools/gpu/gl/null/NullGLTestContext.cpp"
-        "/mywork/github/skia/tools/gpu/mock/MockTestContext.cpp"
+        "/mywork/github/skia/tools/gpu/mock/MockTestContext.cpp")
+
+if(TARGET_ANDROID)
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/tools/gpu/gl/egl/CreatePlatformGLTestContext_egl.cpp"
+        "/mywork/github/skia/tools/gpu/vk/VkTestContext.cpp"
+        "/mywork/github/skia/tools/gpu/vk/VkTestUtils.cpp")
+else()
+list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/tools/gpu/gl/mac/CreatePlatformGLTestContext_mac.cpp")
+
+endif()
+
 set("${target}__other_srcs" "/mywork/github/skia/tools/gpu/MemoryCache.h")
 add_library("${target}" OBJECT ${${target}__cxx_srcs} ${${target}__other_srcs})
 set_source_files_properties(${${target}__other_srcs} PROPERTIES HEADER_FILE_ONLY "True")

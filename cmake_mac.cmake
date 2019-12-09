@@ -7,7 +7,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
 add_definitions(-DSDL_VIDEO_DRIVER_COCOA=1)
 
-
 include(cmake_gpu_tool_utils.cmake)
 include(cmake_raw.cmake)
 include(cmake_sse42.cmake)

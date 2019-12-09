@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 cmake_policy(VERSION 2.8.8)
 enable_language(ASM)
 
-add_definitions(-DSDL_VIDEO_DRIVER_COCOA=1)
-
 include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/include/
         ${CMAKE_CURRENT_SOURCE_DIR}/include/private/
@@ -56,13 +54,13 @@ include_directories(
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/skshaper/include/
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/sksg/include/
         ${CMAKE_CURRENT_SOURCE_DIR}/samplecode
+        ${CMAKE_CURRENT_SOURCE_DIR}/skia/tools/sk_app/android
         ${CMAKE_CURRENT_SOURCE_DIR}/gm
         ${CMAKE_CURRENT_SOURCE_DIR}/modules/skottie/include/
         ${CMAKE_CURRENT_SOURCE_DIR}/experimental/svg/model/
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/gif/
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulkan
-        ${CMAKE_CURRENT_SOURCE_DIR}/skia/tools/sk_app/android
-
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulkanmemoryallocator
 )
 
 if(TARGET_ANDROID)

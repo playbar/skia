@@ -195,8 +195,8 @@ bool CreateVkBackendContext(const GrVkInterface::GetInstanceProc& getInstancePro
         extensionFlags |= kKHR_win32_surface_GrVkExtensionFlag;
     }
 #elif defined(SK_BUILD_FOR_ANDROID)
-    if (extensions.hasInstanceExtension(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME)) {
-        instanceExtensionNames.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+    if (extensions.hasInstanceExtension("VK_KHR_android_surface")) {
+        instanceExtensionNames.push_back("VK_KHR_android_surface");
         extensionFlags |= kKHR_android_surface_GrVkExtensionFlag;
     }
 #elif defined(SK_BUILD_FOR_UNIX) && !defined(__Fuchsia__)
