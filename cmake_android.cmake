@@ -11,9 +11,549 @@ set("target" "compile_processors")
 set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
 add_custom_target("${target}" SOURCES ${${target}__cxx_srcs})
 
+#//third_party/expat:expat
+set("target" "third_party__expat")
+list(APPEND "${target}__c_srcs"
+        "/mywork/github/skia/third_party/externals/expat/lib/xmlparse.c"
+        "/mywork/github/skia/third_party/externals/expat/lib/xmlrole.c"
+        "/mywork/github/skia/third_party/externals/expat/lib/xmltok.c")
+add_library("${target}" OBJECT ${${target}__c_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "HAVE_MEMMOVE;XML_STATIC;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/expat/lib ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//third_party/libwebp:libwebp_sse41
+set("target" "third_party__libwebp_libwebp_sse41")
+list(APPEND "${target}__c_srcs"
+        "/mywork/github/skia/third_party/externals/libwebp/src/dsp/alpha_processing_sse41.c"
+        "/mywork/github/skia/third_party/externals/libwebp/src/dsp/dec_sse41.c"
+        "/mywork/github/skia/third_party/externals/libwebp/src/dsp/enc_sse41.c"
+        "/mywork/github/skia/third_party/externals/libwebp/src/dsp/lossless_enc_sse41.c")
+add_library("${target}" OBJECT ${${target}__c_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "WEBP_SWAP_16BIT_CSP;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/libwebp/src -isystem /mywork/github/skia/third_party/externals/libwebp -msse4.1 ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:jpeg
+set("target" "jpeg")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/src/codec/SkJpegCodec.cpp"
+        "/mywork/github/skia/src/codec/SkJpegDecoderMgr.cpp"
+        "/mywork/github/skia/src/codec/SkJpegUtility.cpp"
+        "/mywork/github/skia/src/images/SkJPEGWriteUtility.cpp"
+        "/mywork/github/skia/src/images/SkJpegEncoder.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;SK_HAS_JPEG_LIBRARY;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/libjpeg-turbo -isystem /mywork/github/skia/third_party/externals/libjpeg-turbo -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:flags
+set("target" "flags")
+set("${target}__cxx_srcs" "/mywork/github/skia/tools/flags/SkCommandLineFlags.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SK_ENABLE_SPIRV_VALIDATION;SK_HAS_HEIF_LIBRARY;SK_HAS_JPEG_LIBRARY;SK_SUPPORT_PDF;SK_PDF_USE_SFNTLY;SK_HAS_PNG_LIBRARY;SK_CODEC_DECODES_RAW;SK_HAS_WEBP_LIBRARY;SK_XML;SK_SUPPORT_ATLAS_TEXT=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+add_dependencies("${target}"
+        "skia")
+
+
+#//third_party/spirv-tools:spirv_build_version
+set("target" "third_party__spirv-tools_spirv_build_version")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-tools/CHANGES")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/build-version.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/update_build_version.py"
+        "../third_party/externals/spirv-tools"
+        "spirv-tools/build-version.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//third_party/spirv-tools:spirv_core_tables_1.0
+set("target" "third_party__spirv-tools_spirv_core_tables_1.0")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.0/spirv.core.grammar.json")
+list(APPEND "${target}__output"
+        "/mywork/github/skia/cmake/spirv-tools/core.insts-1.0.inc"
+        "/mywork/github/skia/cmake/spirv-tools/operand.kinds-1.0.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--spirv-core-grammar=../third_party/externals/spirv-headers/include/spirv/1.0/spirv.core.grammar.json"
+        "--core-insts-output=spirv-tools/core.insts-1.0.inc"
+        "--operand-kinds-output=spirv-tools/operand.kinds-1.0.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//third_party/spirv-tools:spirv_core_tables_1.1
+set("target" "third_party__spirv-tools_spirv_core_tables_1.1")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.1/spirv.core.grammar.json")
+list(APPEND "${target}__output"
+        "/mywork/github/skia/cmake/spirv-tools/core.insts-1.1.inc"
+        "/mywork/github/skia/cmake/spirv-tools/operand.kinds-1.1.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--spirv-core-grammar=../third_party/externals/spirv-headers/include/spirv/1.1/spirv.core.grammar.json"
+        "--core-insts-output=spirv-tools/core.insts-1.1.inc"
+        "--operand-kinds-output=spirv-tools/operand.kinds-1.1.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//third_party/spirv-tools:spirv_core_tables_1.2
+set("target" "third_party__spirv-tools_spirv_core_tables_1.2")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.2/spirv.core.grammar.json")
+list(APPEND "${target}__output"
+        "/mywork/github/skia/cmake/spirv-tools/core.insts-1.2.inc"
+        "/mywork/github/skia/cmake/spirv-tools/operand.kinds-1.2.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--spirv-core-grammar=../third_party/externals/spirv-headers/include/spirv/1.2/spirv.core.grammar.json"
+        "--core-insts-output=spirv-tools/core.insts-1.2.inc"
+        "--operand-kinds-output=spirv-tools/operand.kinds-1.2.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//third_party/spirv-tools:spirv_extension_enum
+set("target" "third_party__spirv-tools_spirv_extension_enum")
+list(APPEND "${target}__other_srcs"
+        "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.0/extinst.glsl.std.450.grammar.json"
+        "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.0/spirv.core.grammar.json")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/extension_enum.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--spirv-core-grammar=../third_party/externals/spirv-headers/include/spirv/1.0/spirv.core.grammar.json"
+        "--extension-enum-output=spirv-tools/extension_enum.inc"
+        "--enum-string-mapping-output=spirv-tools/enum_string_mapping.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//third_party/zlib:zlib
+set("target" "third_party__zlib")
+list(APPEND "${target}__c_srcs"
+        "/mywork/github/skia/third_party/externals/zlib/adler32.c"
+        "/mywork/github/skia/third_party/externals/zlib/compress.c"
+        "/mywork/github/skia/third_party/externals/zlib/crc32.c"
+        "/mywork/github/skia/third_party/externals/zlib/deflate.c"
+        "/mywork/github/skia/third_party/externals/zlib/gzclose.c"
+        "/mywork/github/skia/third_party/externals/zlib/gzlib.c"
+        "/mywork/github/skia/third_party/externals/zlib/gzread.c"
+        "/mywork/github/skia/third_party/externals/zlib/gzwrite.c"
+        "/mywork/github/skia/third_party/externals/zlib/infback.c"
+        "/mywork/github/skia/third_party/externals/zlib/inffast.c"
+        "/mywork/github/skia/third_party/externals/zlib/inflate.c"
+        "/mywork/github/skia/third_party/externals/zlib/inftrees.c"
+        "/mywork/github/skia/third_party/externals/zlib/trees.c"
+        "/mywork/github/skia/third_party/externals/zlib/uncompr.c"
+        "/mywork/github/skia/third_party/externals/zlib/zutil.c")
+add_library("${target}" OBJECT ${${target}__c_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/zlib ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//third_party/piex:piex
+set("target" "third_party__piex")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/third_party/externals/piex/src/binary_parse/cached_paged_byte_array.cc"
+        "/mywork/github/skia/third_party/externals/piex/src/binary_parse/range_checked_byte_ptr.cc"
+        "/mywork/github/skia/third_party/externals/piex/src/image_type_recognition/image_type_recognition_lite.cc"
+        "/mywork/github/skia/third_party/externals/piex/src/piex.cc"
+        "/mywork/github/skia/third_party/externals/piex/src/tiff_directory/tiff_directory.cc"
+        "/mywork/github/skia/third_party/externals/piex/src/tiff_parser.cc")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "BREAK_IF_DEBUGGING_AND_OUT_OF_RANGE;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/piex -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:xml
+set("target" "xml")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/src/svg/SkSVGCanvas.cpp"
+        "/mywork/github/skia/src/svg/SkSVGDevice.cpp"
+        "/mywork/github/skia/src/xml/SkDOM.cpp"
+        "/mywork/github/skia/src/xml/SkXMLParser.cpp"
+        "/mywork/github/skia/src/xml/SkXMLWriter.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;SK_XML;XML_STATIC;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/expat/lib -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//third_party/zlib:zlib_x86
+set("target" "third_party__zlib_zlib_x86")
+list(APPEND "${target}__c_srcs"
+        "/mywork/github/skia/third_party/externals/zlib/crc_folding.c"
+        "/mywork/github/skia/third_party/externals/zlib/fill_window_sse.c"
+        "/mywork/github/skia/third_party/externals/zlib/x86.c")
+add_library("${target}" OBJECT ${${target}__c_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -msse4.2 -mpclmul ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//third_party/spirv-tools:spirv_generators
+set("target" "third_party__spirv-tools_spirv_generators")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/spir-v.xml")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/generators.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_registry_tables.py"
+        "--xml=../third_party/externals/spirv-headers/include/spirv/spir-v.xml"
+        "--generator-output=spirv-tools/generators.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//:armv7
+set("target" "armv7")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:common_flags
+set("target" "common_flags")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/tools/flags/SkCommonFlags.cpp"
+        "/mywork/github/skia/tools/flags/SkCommonFlagsConfig.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SK_ENABLE_SPIRV_VALIDATION;SK_HAS_HEIF_LIBRARY;SK_HAS_JPEG_LIBRARY;SK_SUPPORT_PDF;SK_PDF_USE_SFNTLY;SK_HAS_PNG_LIBRARY;SK_CODEC_DECODES_RAW;SK_HAS_WEBP_LIBRARY;SK_XML;SK_SUPPORT_ATLAS_TEXT=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+add_dependencies("${target}"
+        "skia")
+
+
+#//third_party/jsoncpp:jsoncpp
+set("target" "third_party__jsoncpp")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/third_party/externals/jsoncpp/src/lib_json/json_reader.cpp"
+        "/mywork/github/skia/third_party/externals/jsoncpp/src/lib_json/json_value.cpp"
+        "/mywork/github/skia/third_party/externals/jsoncpp/src/lib_json/json_writer.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "JSON_USE_EXCEPTION=0;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/jsoncpp/include -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+#//:views
+set("target" "views")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/src/views/SkEvent.cpp"
+        "/mywork/github/skia/src/views/SkEventSink.cpp"
+        "/mywork/github/skia/src/views/SkTouchGesture.cpp"
+        "/mywork/github/skia/src/views/SkView.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SK_ENABLE_SPIRV_VALIDATION;SK_HAS_HEIF_LIBRARY;SK_HAS_JPEG_LIBRARY;SK_SUPPORT_PDF;SK_PDF_USE_SFNTLY;SK_HAS_PNG_LIBRARY;SK_CODEC_DECODES_RAW;SK_HAS_WEBP_LIBRARY;SK_XML;SK_SUPPORT_ATLAS_TEXT=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+add_dependencies("${target}"
+        "skia")
+
+
+#//third_party/spirv-tools:spirv_glsl_tables
+set("target" "third_party__spirv-tools_spirv_glsl_tables")
+list(APPEND "${target}__other_srcs"
+        "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.0/extinst.glsl.std.450.grammar.json"
+        "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.0/spirv.core.grammar.json")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/glsl.std.450.insts-1.0.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--spirv-core-grammar=../third_party/externals/spirv-headers/include/spirv/1.0/spirv.core.grammar.json"
+        "--extinst-glsl-grammar=../third_party/externals/spirv-headers/include/spirv/1.0/extinst.glsl.std.450.grammar.json"
+        "--glsl-insts-output=spirv-tools/glsl.std.450.insts-1.0.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+
+#//:fontmgr_empty
+set("target" "fontmgr_empty")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+#//:fontmgr_fontconfig
+set("target" "fontmgr_fontconfig")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//third_party/spirv-tools:spirv_opencl_tables
+set("target" "third_party__spirv-tools_spirv_opencl_tables")
+list(APPEND "${target}__other_srcs"
+        "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.0/extinst.opencl.std.100.grammar.json"
+        "/mywork/github/skia/third_party/externals/spirv-headers/include/spirv/1.0/spirv.core.grammar.json")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/opencl.std.insts-1.0.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--spirv-core-grammar=../third_party/externals/spirv-headers/include/spirv/1.0/spirv.core.grammar.json"
+        "--extinst-opencl-grammar=../third_party/externals/spirv-headers/include/spirv/1.0/extinst.glsl.std.450.grammar.json"
+        "--opencl-insts-output=spirv-tools/opencl.std.insts-1.0.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//third_party/libwebp:libwebp_avx2
+set("target" "third_party__libwebp_libwebp_avx2")
+set("${target}__c_srcs" "/mywork/github/skia/third_party/externals/libwebp/src/dsp/enc_avx2.c")
+add_library("${target}" OBJECT ${${target}__c_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "WEBP_SWAP_16BIT_CSP;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/libwebp/src -isystem /mywork/github/skia/third_party/externals/libwebp -mavx2 ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//third_party/spirv-tools:spirv_vendor_tables_amd_shader_ballot
+set("target" "third_party__spirv-tools_spirv_vendor_tables_amd_shader_ballot")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-tools/source/extinst.spv-amd-shader-ballot.grammar.json")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/spv-amd-shader-ballot.insts.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--extinst-vendor-grammar=../third_party/externals/spirv-tools/source/extinst.spv-amd-shader-ballot.grammar.json"
+        "--vendor-insts-output=spirv-tools/spv-amd-shader-ballot.insts.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//:fontmgr_fuchsia
+set("target" "fontmgr_fuchsia")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//third_party/spirv-tools:spirv_vendor_tables_amd_shader_explicit_vertex_parameter
+set("target" "third_party__spirv-tools_spirv_vendor_tables_amd_shader_explicit_vertex_parameter")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-tools/source/extinst.spv-amd-shader-explicit-vertex-parameter.grammar.json")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/spv-amd-shader-explicit-vertex-parameter.insts.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--extinst-vendor-grammar=../third_party/externals/spirv-tools/source/extinst.spv-amd-shader-explicit-vertex-parameter.grammar.json"
+        "--vendor-insts-output=spirv-tools/spv-amd-shader-explicit-vertex-parameter.insts.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+
+#//third_party/spirv-headers:spirv-headers
+set("target" "third_party__spirv-headers")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/spirv-headers/include -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//third_party/spirv-tools:spirv_vendor_tables_amd_shader_gcn_shader
+set("target" "third_party__spirv-tools_spirv_vendor_tables_amd_shader_gcn_shader")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-tools/source/extinst.spv-amd-gcn-shader.grammar.json")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/spv-amd-gcn-shader.insts.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--extinst-vendor-grammar=../third_party/externals/spirv-tools/source/extinst.spv-amd-gcn-shader.grammar.json"
+        "--vendor-insts-output=spirv-tools/spv-amd-gcn-shader.insts.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+
+#//third_party/spirv-tools:spirv_vendor_tables_amd_shader_trinary_minmax
+set("target" "third_party__spirv-tools_spirv_vendor_tables_amd_shader_trinary_minmax")
+set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-tools/source/extinst.spv-amd-shader-trinary-minmax.grammar.json")
+set("${target}__output" "/mywork/github/skia/cmake/spirv-tools/spv-amd-shader-trinary-minmax.insts.inc")
+add_custom_command(OUTPUT ${${target}__output}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "/mywork/github/skia/cmake/spirv-tools"
+        COMMAND python "/mywork/github/skia/third_party/externals/spirv-tools/utils/generate_grammar_tables.py"
+        "--extinst-vendor-grammar=../third_party/externals/spirv-tools/source/extinst.spv-amd-shader-trinary-minmax.grammar.json"
+        "--vendor-insts-output=spirv-tools/spv-amd-shader-trinary-minmax.insts.inc"
+        DEPENDS  ${${target}__other_srcs}
+        WORKING_DIRECTORY "/mywork/github/skia/cmake/"
+        COMMENT "Action: ${target}"
+        VERBATIM)
+add_custom_target("${target}" SOURCES ${${target}__other_srcs} DEPENDS ${${target}__output})
+
+#//:sse2
+set("target" "sse2")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/src/opts/SkBitmapProcState_opts_SSE2.cpp"
+        "/mywork/github/skia/src/opts/SkBlitRow_opts_SSE2.cpp"
+        "/mywork/github/skia/src/opts/opts_check_x86.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-msse2 -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:crc32
+set("target" "crc32")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:arm64
+set("target" "arm64")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:webp
+set("target" "webp")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/src/codec/SkWebpAdapterCodec.cpp"
+        "/mywork/github/skia/src/codec/SkWebpCodec.cpp"
+        "/mywork/github/skia/src/images/SkWebpEncoder.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;SK_HAS_WEBP_LIBRARY;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/libwebp/src -isystem /mywork/github/skia/third_party/externals/libwebp -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+#//:hsw
+set("target" "hsw")
+set("${target}__cxx_srcs" "/mywork/github/skia/src/opts/SkOpts_hsw.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-march=haswell -ffp-contract=fast -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+#//:none
+set("target" "none")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:png
+set("target" "png")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/src/codec/SkIcoCodec.cpp"
+        "/mywork/github/skia/src/codec/SkPngCodec.cpp"
+        "/mywork/github/skia/src/images/SkPngEncoder.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;SK_HAS_PNG_LIBRARY;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/libpng -isystem /mywork/github/skia/third_party/externals/libpng -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:heif
+set("target" "heif")
+set("${target}__cxx_srcs" "/mywork/github/skia/src/codec/SkHeifCodec.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;SK_HAS_HEIF_LIBRARY;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:ssse3
+set("target" "ssse3")
+list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/src/opts/SkBitmapProcState_opts_SSSE3.cpp"
+        "/mywork/github/skia/src/opts/SkOpts_ssse3.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-mssse3 -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:fontmgr_android
+set("target" "fontmgr_android")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+#//:fontmgr_custom
+set("target" "fontmgr_custom")
+set("${target}__cxx_srcs" "/mywork/github/skia/cmake/empty.cpp")
+add_library("${target}" OBJECT ${${target}__cxx_srcs})
+set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
+
+
+
+include(cmake_third_party__libpng.cmake)
+include(cmake_third_party__libjpeg.cmake)
+include(cmake_third_party__icu.cmake)
+include(cmake_third_party__libsdl.cmake)
+include(cmake_third_party__libwebp.cmake)
+include(cmake_third_party__dng_sdk.cmake)
+include(cmake_third_party__spirv.cmake)
+include(cmake_third_party__sfntly.cmake)
+include(cmake_experimental_svg_model.cmake)
+include(cmake_gpu_tool_utils.cmake)
+include(cmake_tool_utils.cmake)
+include(cmake_effects.cmake)
+include(cmake_pdf.cmake)
+include(cmake_gpu.cmake)
+include(cmake_avx.cmake)
+include(cmake_sse41.cmake)
+include(cmake_sse42.cmake)
 include(cmake_raw.cmake)
+include(cmake_skcms.cmake)
 include(cmake_skia.cmake)
 include(cmake_sk_app.cmake)
+include(cmake_helloworld.cmake)
 
 
 
