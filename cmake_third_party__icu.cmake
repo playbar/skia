@@ -183,7 +183,12 @@ list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/third_party/externals/icu/source/common/uvector.cpp"
         "/mywork/github/skia/third_party/externals/icu/source/common/uvectr32.cpp"
         "/mywork/github/skia/third_party/externals/icu/source/common/uvectr64.cpp")
-set("${target}__asm_srcs" "/mywork/github/skia/third_party/externals/icu/mac/icudtl_dat.S")
+if(TARGET_ANDROID)
+    set("${target}__asm_srcs" "/mywork/github/skia/third_party/externals/icu/android/icudtl_dat.S")
+else()
+    set("${target}__asm_srcs" "/mywork/github/skia/third_party/externals/icu/mac/icudtl_dat.S")
+endif()
+
 add_library("${target}" OBJECT ${${target}__cxx_srcs} ${${target}__c_srcs} ${${target}__asm_srcs})
 set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "U_COMMON_IMPLEMENTATION;U_STATIC_IMPLEMENTATION;U_ENABLE_DYLOAD=0;U_USING_ICU_NAMESPACE=0;")
 set_source_files_properties(${${target}__cxx_srcs} PROPERTIES COMPILE_FLAGS "-std=c++14 -fvisibility-inlines-hidden -fno-exceptions ")

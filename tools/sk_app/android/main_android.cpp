@@ -8,7 +8,7 @@
 #include <jni.h>
 #include <errno.h>
 
-#include <android_native_app_glue.h>
+#include "android_native_app_glue.h"
 
 #include "../Application.h"
 #include "Timer.h"

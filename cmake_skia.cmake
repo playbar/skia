@@ -326,9 +326,19 @@ list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/src/ports/SkOSLibrary_posix.cpp"
         "/mywork/github/skia/src/ports/SkTLS_pthread.cpp"
         "/mywork/github/skia/src/ports/SkDebug_stdio.cpp"
-        "/mywork/github/skia/src/ports/SkFontHost_mac.cpp"
         "/mywork/github/skia/src/ports/SkImageEncoder_CG.cpp"
-        "/mywork/github/skia/src/ports/SkImageGeneratorCG.cpp")
+        )
+
+if(TARGET_ANDROID)
+    list(APPEND "${target}__cxx_srcs"
+        )
+else()
+    list(APPEND "${target}__cxx_srcs"
+        "/mywork/github/skia/src/ports/SkFontHost_mac.cpp"
+        "/mywork/github/skia/src/ports/SkImageGeneratorCG.cpp"
+        )
+endif()
+
 list(APPEND "${target}__obj_target_srcs"
         "$<TARGET_OBJECTS:raw>"
         "$<TARGET_OBJECTS:sse42>"
@@ -350,7 +360,6 @@ list(APPEND "${target}__obj_target_srcs"
         "$<TARGET_OBJECTS:gpu>"
         "$<TARGET_OBJECTS:fontmgr_fuchsia>"
         "$<TARGET_OBJECTS:third_party__spirv-headers>"
-        "$<TARGET_OBJECTS:sse2>"
         "$<TARGET_OBJECTS:crc32>"
         "$<TARGET_OBJECTS:arm64>"
         "$<TARGET_OBJECTS:third_party__dng_sdk>"
@@ -362,13 +371,19 @@ list(APPEND "${target}__obj_target_srcs"
         "$<TARGET_OBJECTS:none>"
         "$<TARGET_OBJECTS:third_party__zlib>"
         "$<TARGET_OBJECTS:png>"
-        "$<TARGET_OBJECTS:third_party__zlib_zlib_x86>"
         "$<TARGET_OBJECTS:heif>"
         "$<TARGET_OBJECTS:effects>"
-        "$<TARGET_OBJECTS:ssse3>"
         "$<TARGET_OBJECTS:pdf>"
         "$<TARGET_OBJECTS:fontmgr_android>"
         "$<TARGET_OBJECTS:fontmgr_custom>")
+
+if(NOT TARGET_ANDROID)
+    list(APPEND "${target}__obj_target_srcs"
+            "$<TARGET_OBJECTS:sse2>"
+            "$<TARGET_OBJECTS:third_party__zlib_zlib_x86>"
+            "$<TARGET_OBJECTS:ssse3>")
+endif()
+
 list(APPEND "${target}__other_srcs"
         "/mywork/github/skia/src/c/sk_types_priv.h"
         "/mywork/github/skia/src/core/Sk4px.h"

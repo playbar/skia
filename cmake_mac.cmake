@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
 cmake_policy(VERSION 2.8.8)
 enable_language(ASM)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+
 add_definitions(-DSDL_VIDEO_DRIVER_COCOA=1)
 
 

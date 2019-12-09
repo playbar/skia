@@ -96,11 +96,8 @@ list(APPEND "${target}__c_srcs"
     "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidevents.c"
     "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidkeyboard.c"
     "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidmessagebox.c"
-    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidmodes.c"
     "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidmouse.c"
-    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidmousetap.c"
-    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidopengl.c"
-    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidshape.c"
+    "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidtouch.c"
     "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidvideo.c"
     "/mywork/github/skia/third_party/externals/sdl/src/video/android/SDL_androidwindow.c")
 else()

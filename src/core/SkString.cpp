@@ -17,6 +17,8 @@
 #include <new>
 #include <utility>
 
+using namespace std;
+
 
 // number of bytes (on the stack) to receive the printf result
 static const size_t kBufferSize = 1024;
@@ -25,7 +27,7 @@ static const char* apply_format_string(const char* format, va_list args, char* s
                                        size_t stackBufferSize, int* length, SkString* heapBuffer) {
     va_list argsCopy;
     va_copy(argsCopy, args);
-    *length = std::vsnprintf(stackBuffer, stackBufferSize, format, args);
+    *length = vsnprintf(stackBuffer, stackBufferSize, format, args);
     if (*length < 0) {
         SkDebugf("SkString: vsnprintf reported error.");
         va_end(argsCopy);
@@ -38,7 +40,7 @@ static const char* apply_format_string(const char* format, va_list args, char* s
     }
     heapBuffer->resize(*length);
     SkDEBUGCODE(int check =)
-            std::vsnprintf(heapBuffer->writable_str(), *length + 1, format, argsCopy);
+            vsnprintf(heapBuffer->writable_str(), *length + 1, format, argsCopy);
     SkASSERT(check == *length);
     va_end(argsCopy);
     return heapBuffer->c_str();

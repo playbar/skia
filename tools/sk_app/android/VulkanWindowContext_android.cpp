@@ -10,6 +10,7 @@
 #include "../VulkanWindowContext.h"
 
 #include "vk/VkTestUtils.h"
+#include "vulkan/vulkan.h"
 
 namespace sk_app {
 
