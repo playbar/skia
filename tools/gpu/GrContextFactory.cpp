@@ -120,7 +120,7 @@ GrContext* GrContextFactory::get(ContextType type, ContextOverrides overrides) {
 ContextInfo GrContextFactory::getContextInfoInternal(ContextType type, ContextOverrides overrides,
                                                      GrContext* shareContext, uint32_t shareIndex) {
     // (shareIndex != 0) -> (shareContext != nullptr)
-    SkASSERT((shareIndex == 0) || (shareContext != nullptr));
+//    SkASSERT((shareIndex == 0) || (shareContext != nullptr));
 
     for (int i = 0; i < fContexts.count(); ++i) {
         Context& context = fContexts[i];
@@ -144,7 +144,7 @@ ContextInfo GrContextFactory::getContextInfoInternal(ContextType type, ContextOv
                 break;
             }
         }
-        SkASSERT(masterContext && masterContext->fType == type);
+//        SkASSERT(masterContext && masterContext->fType == type);
     }
 
     std::unique_ptr<TestContext> testCtx;
@@ -205,7 +205,7 @@ ContextInfo GrContextFactory::getContextInfoInternal(ContextType type, ContextOv
         case kVulkan_GrBackend: {
             VkTestContext* vkSharedContext = masterContext
                     ? static_cast<VkTestContext*>(masterContext->fTestContext) : nullptr;
-            SkASSERT(kVulkan_ContextType == type);
+//            SkASSERT(kVulkan_ContextType == type);
             if (ContextOverrides::kRequireNVPRSupport & overrides) {
                 return ContextInfo();
             }
@@ -228,7 +228,7 @@ ContextInfo GrContextFactory::getContextInfoInternal(ContextType type, ContextOv
 #endif
 #ifdef SK_METAL
         case kMetal_GrBackend: {
-            SkASSERT(!masterContext);
+//            SkASSERT(!masterContext);
             testCtx.reset(CreatePlatformMtlTestContext(nullptr));
             if (!testCtx) {
                 return ContextInfo();
@@ -238,7 +238,7 @@ ContextInfo GrContextFactory::getContextInfoInternal(ContextType type, ContextOv
 #endif
         case kMock_GrBackend: {
             TestContext* sharedContext = masterContext ? masterContext->fTestContext : nullptr;
-            SkASSERT(kMock_ContextType == type);
+//            SkASSERT(kMock_ContextType == type);
             if (ContextOverrides::kRequireNVPRSupport & overrides) {
                 return ContextInfo();
             }
@@ -252,7 +252,7 @@ ContextInfo GrContextFactory::getContextInfoInternal(ContextType type, ContextOv
             return ContextInfo();
     }
 
-    SkASSERT(testCtx && testCtx->backend() == backend);
+//    SkASSERT(testCtx && testCtx->backend() == backend);
     GrContextOptions grOptions = fGlobalOptions;
     if (ContextOverrides::kDisableNVPR & overrides) {
         grOptions.fSuppressPathRendering = true;
@@ -295,7 +295,7 @@ ContextInfo GrContextFactory::getContextInfo(ContextType type, ContextOverrides 
 }
 
 ContextInfo GrContextFactory::getSharedContextInfo(GrContext* shareContext, uint32_t shareIndex) {
-    SkASSERT(shareContext);
+//    SkASSERT(shareContext);
     for (int i = 0; i < fContexts.count(); ++i) {
         if (!fContexts[i].fAbandoned && fContexts[i].fGrContext == shareContext) {
             return this->getContextInfoInternal(fContexts[i].fType, fContexts[i].fOverrides,

@@ -247,6 +247,7 @@ list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/src/sksl/ir/SkSLType.cpp"
         "/mywork/github/skia/src/sksl/ir/SkSLVariableReference.cpp"
         "/mywork/github/skia/src/gpu/gl/mac/GrGLMakeNativeInterface_mac.cpp"
+        "/mywork/github/skia/src/gpu/gl/egl/GrGLMakeNativeInterface_egl.cpp"
         "/mywork/github/skia/src/atlastext/SkAtlasTextContext.cpp"
         "/mywork/github/skia/src/atlastext/SkAtlasTextTarget.cpp"
         "/mywork/github/skia/src/atlastext/SkInternalAtlasTextContext.cpp")
@@ -293,6 +294,7 @@ list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/src/gpu/vk/GrVkUtil.cpp"
         "/mywork/github/skia/src/gpu/vk/GrVkVaryingHandler.cpp"
         "/mywork/github/skia/src/gpu/vk/GrVkVertexBuffer.cpp"
+        "/mywork/github/skia/third_party/vulkanmemoryallocator/GrVulkanMemoryAllocator.cpp"
         )
 endif()
 
@@ -575,7 +577,9 @@ list(APPEND "${target}__other_srcs"
         "/mywork/github/skia/include/atlastext/SkAtlasTextContext.h"
         "/mywork/github/skia/include/atlastext/SkAtlasTextFont.h"
         "/mywork/github/skia/include/atlastext/SkAtlasTextRenderer.h"
-        "/mywork/github/skia/include/atlastext/SkAtlasTextTarget.h")
+        "/mywork/github/skia/include/atlastext/SkAtlasTextTarget.h"
+        "/mywork/github/skia/third_party/vulkanmemoryallocator/include/vk_mem_alloc.h"
+        "/mywork/github/skia/third_party/vulkanmemoryallocator/GrVulkanMemoryAllocator.h")
 add_library("${target}" OBJECT ${${target}__cxx_srcs} ${${target}__other_srcs})
 set_source_files_properties(${${target}__other_srcs} PROPERTIES HEADER_FILE_ONLY "True")
 set_property(TARGET "${target}" APPEND PROPERTY INCLUDE_DIRECTORIES
@@ -617,7 +621,7 @@ set_property(TARGET "${target}" APPEND PROPERTY INCLUDE_DIRECTORIES
         "/mywork/github/skia/third_party/gif/"
         "/mywork/github/skia/src/gpu/")
 set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;SK_ENABLE_SPIRV_VALIDATION;")
-set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -isystem /mywork/github/skia/third_party/externals/spirv-tools/include -isystem /mywork/github/skia/third_party/externals/spirv-tools/source -isystem /mywork/github/skia/cmake/spirv-tools -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -Wno-unused-variable -Wno-missing-field-initializers -g -isystem /mywork/github/skia/third_party/externals/spirv-tools/include -isystem /mywork/github/skia/third_party/externals/spirv-tools/source -isystem /mywork/github/skia/cmake/spirv-tools -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
 set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
 add_dependencies("${target}"
         "compile_processors")

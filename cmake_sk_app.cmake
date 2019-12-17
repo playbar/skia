@@ -4,14 +4,15 @@ set("target" "sk_app")
 list(APPEND "${target}__cxx_srcs"
         "/mywork/github/skia/tools/sk_app/CommandSet.cpp"
         "/mywork/github/skia/tools/sk_app/GLWindowContext.cpp"
+        "/mywork/github/skia/tools/sk_app/VulkanWindowContext.cpp"
         "/mywork/github/skia/tools/sk_app/Window.cpp")
 
-#"/mywork/github/skia/tools/sk_app/android/VulkanWindowContext_android.cpp"
+#
 
 if(TARGET_ANDROID)
 list(APPEND "${target}__cxx_srcs"
-        "/mywork/github/skia/tools/sk_app/android/android_native_app_glue.c"
         "/mywork/github/skia/tools/sk_app/android/GLWindowContext_android.cpp"
+        "/mywork/github/skia/tools/sk_app/android/VulkanWindowContext_android.cpp"
         "/mywork/github/skia/tools/sk_app/android/main_android.cpp"
         "/mywork/github/skia/tools/sk_app/android/RasterWindowContext_android.cpp"
         "/mywork/github/skia/tools/sk_app/android/surface_glue_android.cpp"

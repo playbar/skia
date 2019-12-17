@@ -5,6 +5,7 @@
 * found in the LICENSE file.
 */
 
+#include <android/android_native_app_glue.h>
 #include "HelloWorld.h"
 
 #include "GrContext.h"
@@ -21,6 +22,7 @@ Application* Application::Create(int argc, char** argv, void* platformData) {
 HelloWorld::HelloWorld(int argc, char** argv, void* platformData)
         : fBackendType(Window::kNativeGL_BackendType)
         , fRotationAngle(0) {
+    app_dummy();
     SkGraphics::Init();
 
     fWindow = Window::CreateNativeWindow(platformData);

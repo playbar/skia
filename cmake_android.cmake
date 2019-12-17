@@ -162,6 +162,7 @@ list(APPEND "${target}__c_srcs"
         "/mywork/github/skia/third_party/externals/zlib/adler32.c"
         "/mywork/github/skia/third_party/externals/zlib/compress.c"
         "/mywork/github/skia/third_party/externals/zlib/crc32.c"
+        "/mywork/github/skia/third_party/externals/zlib/simd_stub.c"
         "/mywork/github/skia/third_party/externals/zlib/deflate.c"
         "/mywork/github/skia/third_party/externals/zlib/gzclose.c"
         "/mywork/github/skia/third_party/externals/zlib/gzlib.c"
@@ -398,6 +399,20 @@ set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-w -fstrict-aliasing
 set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
 
 
+##//:fiddle
+#set("target" "fiddle")
+#list(APPEND "${target}__cxx_srcs"
+#        "/mywork/github/skia/tools/fiddle/draw.cpp"
+#        "/mywork/github/skia/tools/fiddle/fiddle_main.cpp"
+#        "/mywork/github/skia/tools/fiddle/null_context.cpp")
+#add_executable("${target}" ${${target}__cxx_srcs} ${${target}__obj_target_srcs})
+#set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_ENABLE_SPIRV_VALIDATION;SK_HAS_HEIF_LIBRARY;SK_HAS_JPEG_LIBRARY;SK_SUPPORT_PDF;SK_PDF_USE_SFNTLY;SK_HAS_PNG_LIBRARY;SK_CODEC_DECODES_RAW;SK_HAS_WEBP_LIBRARY;SK_XML;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SK_SUPPORT_ATLAS_TEXT=1;SK_ENABLE_SKOTTIE;")
+#set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
+#set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-rpath,@loader_path/. -Wl,-w ")
+#add_dependencies("${target}"
+#        "skia.h")
+
+
 #//third_party/spirv-tools:spirv_vendor_tables_amd_shader_gcn_shader
 set("target" "third_party__spirv-tools_spirv_vendor_tables_amd_shader_gcn_shader")
 set("${target}__other_srcs" "/mywork/github/skia/third_party/externals/spirv-tools/source/extinst.spv-amd-gcn-shader.grammar.json")
@@ -470,7 +485,10 @@ set_target_properties("${target}" PROPERTIES LINK_FLAGS "-Wl,-w ")
 
 #//:hsw
 set("target" "hsw")
-set("${target}__cxx_srcs" "/mywork/github/skia/src/opts/SkOpts_hsw.cpp")
+set("${target}__cxx_srcs" "/mywork/github/skia/src/opts/SkOpts_hsw.cpp"
+        "/mywork/github/skia/src/opts/SkBlitMask_opts_none.cpp"
+        "/mywork/github/skia/src/opts/SkBlitRow_opts_none.cpp"
+        "/mywork/github/skia/src/opts/SkBitmapProcState_opts_none.cpp")
 add_library("${target}" OBJECT ${${target}__cxx_srcs})
 set_target_properties("${target}" PROPERTIES COMPILE_DEFINITIONS "SK_SUPPORT_ATLAS_TEXT=1;SK_GAMMA_APPLY_TO_A8;SK_ENABLE_DISCRETE_GPU;GR_TEST_UTILS=1;SKIA_IMPLEMENTATION=1;")
 set_target_properties("${target}" PROPERTIES COMPILE_FLAGS "-ffp-contract=fast -fstrict-aliasing -fPIC -Werror -fvisibility=hidden -Wall -Wextra -Winit-self -Wpointer-arith -Wsign-compare -Wvla -Wno-deprecated-declarations -Wno-maybe-uninitialized -Weverything -Wno-unknown-warning-option -Wno-nonportable-include-path -Wno-nonportable-system-include-path -Wno-cast-align -Wno-cast-qual -Wno-conversion -Wno-disabled-macro-expansion -Wno-documentation -Wno-documentation-unknown-command -Wno-double-promotion -Wno-exit-time-destructors -Wno-float-equal -Wno-format-nonliteral -Wno-global-constructors -Wno-missing-prototypes -Wno-missing-variable-declarations -Wno-pedantic -Wno-reserved-id-macro -Wno-shadow -Wno-shift-sign-overflow -Wno-signed-enum-bitfield -Wno-switch-enum -Wno-undef -Wno-unreachable-code -Wno-unreachable-code-break -Wno-unreachable-code-return -Wno-unused-macros -Wno-unused-member-function -Wno-unused-template -Wno-zero-as-null-pointer-constant -Wno-bad-function-cast -Wno-covered-switch-default -Wno-deprecated -Wno-missing-noreturn -Wno-old-style-cast -Wno-padded -Wno-newline-eof -Wno-implicit-fallthrough -Wno-unused-parameter -g -std=c++14 -fvisibility-inlines-hidden -fno-exceptions -fno-rtti -Wnon-virtual-dtor -Wno-noexcept-type -Wno-abstract-vbase-init -Wno-weak-vtables -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-undefined-func-template ")
